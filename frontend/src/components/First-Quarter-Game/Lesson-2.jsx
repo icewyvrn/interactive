@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import DragAndDrop from './DragAndDrop';
+import Substitute from './Substitute';
 
-const FirstQuarter = () => {
+const Lesson2 = () => {
   const { quarter, lesson } = useParams();
   const [gameStarted, setGameStarted] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -14,16 +14,13 @@ const FirstQuarter = () => {
   // Start timer when game starts
   const startGame = () => {
     setGameStarted(true);
-    // Start tracking time
     const startTime = Date.now();
 
-    // Update time spent every minute
     const timeInterval = setInterval(() => {
       const elapsedMinutes = Math.floor((Date.now() - startTime) / 60000);
       setTimeSpent(elapsedMinutes);
     }, 60000);
 
-    // Clean up interval when component unmounts
     return () => clearInterval(timeInterval);
   };
 
@@ -31,35 +28,31 @@ const FirstQuarter = () => {
   const handleGameComplete = () => {
     setGameStarted(false);
     setActivitiesCompleted(1);
-    setProgress(25); // Assuming this is the first of 4 activities (25%)
+    setProgress(25); // First of 4 activities (25%)
   };
 
   return (
     <div className="max-w-5xl mx-auto">
       {gameStarted ? (
-        // Show the DragAndDrop game component when game is started
         <div className="h-[70vh]">
-          <DragAndDrop onComplete={handleGameComplete} />
+          <Substitute onComplete={handleGameComplete} />
         </div>
       ) : (
-        // Show the intro screen when game is not started
         <>
-          {/* Game content preview */}
           <Card className="mb-8 border border-border">
             <CardHeader>
-              <CardTitle className="text-2xl">Syllable Drop Game</CardTitle>
+              <CardTitle className="text-2xl">Word Substitution Game</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="aspect-video bg-accent/20 rounded-lg flex items-center justify-center">
                 <div className="text-center">
-                  <div className="text-4xl mb-4">🎮</div>
+                  <div className="text-4xl mb-4">🎯</div>
                   <h2 className="text-2xl font-medium mb-2">
-                    Word Syllables - Drag & Drop
+                    Letter Swap Challenge
                   </h2>
                   <p className="text-muted-foreground max-w-md mx-auto">
-                    Learn about syllables in words by completing our interactive
-                    drag and drop activity. Match words with the correct number
-                    of syllables!
+                    Replace letters to create new words! Drag the correct letter
+                    to form meaningful words in this interactive challenge.
                   </p>
                 </div>
               </div>
@@ -73,10 +66,10 @@ const FirstQuarter = () => {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 list-disc pl-5">
-                  <li>Identify words based on their syllable count</li>
-                  <li>Drag the correct word to the boxes at the bottom</li>
-                  <li>Complete all 3 rounds to finish the activity</li>
-                  <li>Each round will have a different syllable count</li>
+                  <li>Look at the word in the boxes</li>
+                  <li>Choose one letter from the options below</li>
+                  <li>Drag it to the highlighted box to form a new word</li>
+                  <li>Complete all 3 rounds with different word lengths</li>
                 </ul>
               </CardContent>
             </Card>
@@ -110,7 +103,7 @@ const FirstQuarter = () => {
 
           <div className="flex justify-center">
             <Button size="lg" className="px-8" onClick={startGame}>
-              Start Activity 1
+              Start Activity 2
             </Button>
           </div>
         </>
@@ -119,4 +112,4 @@ const FirstQuarter = () => {
   );
 };
 
-export default FirstQuarter;
+export default Lesson2;

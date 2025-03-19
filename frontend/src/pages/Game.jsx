@@ -2,13 +2,32 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import FirstQuarter from '../components/First-Quarter-Game/First-Quarter';
+import FirstQuarterLesson1 from '../components/First-Quarter-Game/Lesson-1';
+import FirstQuarterLesson2 from '../components/First-Quarter-Game/Lesson-2';
 
-const FirstQuarterGame = () => {
+// Game components for different quarters and lessons
+const QUARTER_LESSONS = {
+  1: {
+    1: FirstQuarterLesson1,
+    2: FirstQuarterLesson2,
+    // 3: FirstQuarterLesson3,
+    // 4: FirstQuarterLesson4,
+  },
+  // Template for other quarters
+  // 2: {
+  //   1: SecondQuarterLesson1,
+  //   2: SecondQuarterLesson2,
+  //   // ... other lessons
+  // },
+};
+
+const Game = () => {
   const { quarter, lesson } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const isFirstQuarter = quarter === '1';
+
+  const currentQuarter = parseInt(quarter);
+  const currentLesson = parseInt(lesson);
 
   // Simulate loading content
   useEffect(() => {
@@ -32,6 +51,9 @@ const FirstQuarterGame = () => {
     return 'th';
   };
 
+  // Get the appropriate game component
+  const GameComponent = QUARTER_LESSONS[currentQuarter]?.[currentLesson];
+
   return (
     <div className="bg-background text-foreground min-h-screen py-8 px-4 dark">
       <div className="flex items-center mb-8 max-w-5xl mx-auto">
@@ -48,11 +70,10 @@ const FirstQuarterGame = () => {
         <div className="flex justify-center items-center h-[60vh]">
           <div className="animate-pulse text-xl">Loading content...</div>
         </div>
-      ) : isFirstQuarter ? (
-        // First Quarter Content
-        <FirstQuarter />
+      ) : GameComponent ? (
+        <GameComponent />
       ) : (
-        // Coming Soon for other quarters
+        // Coming Soon for unavailable content
         <div className="max-w-5xl mx-auto flex flex-col items-center justify-center h-[60vh]">
           <Card className="w-full max-w-lg text-center">
             <CardHeader>
@@ -62,13 +83,12 @@ const FirstQuarterGame = () => {
               <div className="py-8">
                 <div className="text-6xl mb-6">🚧</div>
                 <p className="text-xl mb-2">
-                  Quarter {quarter}
-                  {getOrdinalSuffix(quarter)} content is currently under
+                  Quarter {quarter} - Lesson {lesson} content is currently under
                   development
                 </p>
                 <p className="text-muted-foreground">
                   We're working hard to bring you exciting new content for this
-                  quarter. Please check back later!
+                  lesson. Please check back later!
                 </p>
               </div>
             </CardContent>
@@ -84,4 +104,4 @@ const FirstQuarterGame = () => {
   );
 };
 
-export default FirstQuarterGame;
+export default Game;
