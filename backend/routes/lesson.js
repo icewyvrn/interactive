@@ -44,7 +44,7 @@ const upload = multer({
   },
 });
 
-// GET all lessons for a specific quarter
+// fetch all lessons for a specific quarter
 lessonRouter.get('/:quarterId/lessons', async (req, res) => {
   const { quarterId } = req.params;
 
@@ -67,7 +67,7 @@ lessonRouter.get('/:quarterId/lessons', async (req, res) => {
   }
 });
 
-// GET specific lesson details
+// fetch specific lesson details according to ID
 lessonRouter.get('/:lessonId', async (req, res) => {
   const { lessonId } = req.params;
 

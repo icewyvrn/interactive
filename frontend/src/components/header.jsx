@@ -15,7 +15,10 @@ const Header = () => {
     <header className="w-full bg-emerald-700 border-b">
       <div className="container mx-auto px-4">
         <div className="h-16 flex items-center justify-between">
-          <div className="text-xl text-white font-bold">
+          <div
+            className="text-xl text-white font-bold cursor-pointer"
+            onClick={() => navigate('/quarter')}
+          >
             Interactive Learning System
           </div>
           <Button

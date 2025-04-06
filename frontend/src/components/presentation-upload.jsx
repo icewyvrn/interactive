@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Upload, FileType } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { toast } from 'sonner';
 
 const PresentationUpload = ({ lessonId, onUploadComplete }) => {
   const [uploading, setUploading] = useState(false);
@@ -52,8 +53,9 @@ const PresentationUpload = ({ lessonId, onUploadComplete }) => {
         if (response.data.success) {
           onUploadComplete(response.data.presentations);
         }
+        toast.success('Files uploaded successfully!');
       } catch (error) {
-        console.error('Upload error:', error);
+        toast.error('Upload error:', error);
         setError(error.response?.data?.message || 'Failed to upload files');
       } finally {
         setUploading(false);

@@ -8,6 +8,7 @@ import { createTables } from './config/tables.js';
 import authRouter from './routes/auth.js';
 import quarterRouter from './routes/quarter.js';
 import lessonRouter from './routes/lesson.js';
+import gameRouter from './routes/game.js';
 
 // Load environment variables
 dotenv.config();
@@ -29,6 +30,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRouter);
 app.use('/api/quarters', quarterRouter);
 app.use('/api/lessons', lessonRouter);
+app.use('/api/game', gameRouter);
 
 // Health check route
 app.get('/api/health', (req, res) => {

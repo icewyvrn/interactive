@@ -134,20 +134,3 @@
     font-family: 'Inter', system-ui, sans-serif;
   }
 }
-
-/* Add these styles for the image viewer dialog */
-[role='dialog'] {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 100vw !important;
-  height: 100vh !important;
-}
-
-.max-w-screen {
-  max-width: 100vw !important;
-}
-
-.max-h-screen {
-  max-height: 100vh !important;
-}

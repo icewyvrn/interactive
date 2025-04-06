@@ -14,20 +14,29 @@ import {
   Download,
   ChevronRight,
   Loader2,
+  Presentation,
+  Clock,
+  CalendarDays,
 } from 'lucide-react';
 import PresentationUpload from '../components/presentation-upload';
 import axios from 'axios';
 import ImageViewer from '../components/image-viewer';
 import VideoViewer from '../components/video-viewer';
+import GameSelectionDialog from '../components/game-select';
+import DragDropGame from '../components/game-play/drag-drop';
 
 const LessonDetails = () => {
   const { quarterId, lessonId } = useParams();
+  const [activeTab, setActiveTab] = useState('presentations');
   const [presentations, setPresentations] = useState([]);
   const [selectedGame, setSelectedGame] = useState(null);
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [lesson, setLesson] = useState(null);
+  const [showGameDialog, setShowGameDialog] = useState(false);
+  const [games, setGames] = useState([]);
+  const [isLoadingGames, setIsLoadingGames] = useState(false);
 
   // Fetch lesson details
   useEffect(() => {
@@ -51,6 +60,12 @@ const LessonDetails = () => {
     fetchPresentations();
   }, [lessonId]);
 
+  useEffect(() => {
+    if (activeTab === 'games') {
+      fetchGames();
+    }
+  }, [activeTab, lessonId]);
+
   const fetchPresentations = async () => {
     try {
       setIsLoading(true);
@@ -65,6 +80,21 @@ const LessonDetails = () => {
       setError('Failed to load presentations');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchGames = async () => {
+    try {
+      setIsLoadingGames(true);
+      const response = await axios.get(`/api/game/lessons/${lessonId}/games`);
+      if (response.data.success) {
+        setGames(response.data.games);
+      }
+    } catch (error) {
+      console.error('Error fetching games:', error);
+      setError('Failed to load games');
+    } finally {
+      setIsLoadingGames(false);
     }
   };
 
@@ -96,24 +126,6 @@ const LessonDetails = () => {
       setError('Failed to download file');
     }
   };
-
-  const games = [
-    {
-      id: 'drag-and-drop',
-      title: 'Drag and Drop',
-      description: 'Create drag and drop exercises',
-    },
-    {
-      id: 'matching',
-      title: 'Matching',
-      description: 'Create matching pairs games',
-    },
-    {
-      id: 'multiple-choice',
-      title: 'Multiple Choice',
-      description: 'Create multiple choice questions',
-    },
-  ];
 
   const getFileTypeIcon = (type) => {
     switch (type) {
@@ -148,6 +160,13 @@ const LessonDetails = () => {
     setPresentations((prev) => [...prev, ...newPresentations]);
   };
 
+  const handlePlayGame = (game) => {
+    {
+      /* TODO: Implement a game play logic here */
+    }
+    console.log('Playing game:', game);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -167,11 +186,28 @@ const LessonDetails = () => {
           <Separator className="my-4" />
         </div>
 
-        <Tabs defaultValue="presentations" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="presentations">Presentations</TabsTrigger>
-            <TabsTrigger value="games">Games</TabsTrigger>
-          </TabsList>
+        <Tabs
+          defaultValue="presentations"
+          className="space-y-4"
+          onValueChange={(value) => setActiveTab(value)}
+        >
+          <div className="flex items-center justify-between">
+            <TabsList>
+              <TabsTrigger value="presentations">Presentations</TabsTrigger>
+              <TabsTrigger value="games">Games</TabsTrigger>
+            </TabsList>
+            {activeTab === 'games' && (
+              <Button
+                variant="outline"
+                size="default"
+                onClick={() => setShowGameDialog(true)}
+                className="bg-indigo-700 text-white hover:bg-indigo-800 hover:text-white transition-all duration-200 px-6 rounded-lg"
+              >
+                <Gamepad2 className="w-5 h-5" />
+                Add Game
+              </Button>
+            )}
+          </div>
 
           <TabsContent value="presentations">
             <PresentationUpload
@@ -274,8 +310,8 @@ const LessonDetails = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center mt-12 py-12 border border-dashed rounded-lg">
-                <Upload className="mx-auto h-10 w-10 text-gray-400 mb-2" />
+              <div className="text-center mt-12 py-24 bg-gray-100 rounded-lg">
+                <Presentation className="mx-auto h-10 w-10 text-gray-400 mb-2" />
                 <p className="text-gray-500 mb-2">
                   No presentations uploaded yet
                 </p>
@@ -287,42 +323,35 @@ const LessonDetails = () => {
           </TabsContent>
 
           <TabsContent value="games">
-            {!selectedGame ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {isLoadingGames ? (
+              <div className="text-center my-12">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
+                <span className="text-gray-500">Loading games...</span>
+              </div>
+            ) : games.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {games.map((game) => (
-                  <Card
+                  <DragDropGame
                     key={game.id}
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => setSelectedGame(game.id)}
-                  >
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Gamepad2 className="w-5 h-5" />
-                        {game.title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-600">{game.description}</p>
-                    </CardContent>
-                  </Card>
+                    game={game}
+                    onPlay={handlePlayGame}
+                  />
                 ))}
               </div>
             ) : (
-              <div>
-                <Button
-                  variant="outline"
-                  onClick={() => setSelectedGame(null)}
-                  className="mb-4"
-                >
-                  Back to Game Selection
-                </Button>
-                {/* Game creation form will go here */}
+              <div className="text-center py-64 bg-gray-100 rounded-lg">
+                <Gamepad2 className="mx-auto h-10 w-10 text-gray-400 mb-2" />
+                <p className="text-gray-500 mb-2">
+                  No games created for this lesson yet
+                </p>
+                <p className="text-sm text-gray-400">
+                  Click the "Add Game" button to create one
+                </p>
               </div>
             )}
           </TabsContent>
         </Tabs>
       </main>
-
       {/* Media Viewers */}
       {selectedMedia?.content_type === 'image' && (
         <ImageViewer
@@ -332,7 +361,6 @@ const LessonDetails = () => {
           className="max-w-screen max-h-screen"
         />
       )}
-
       {selectedMedia?.content_type === 'video' && (
         <VideoViewer
           isOpen={!!selectedMedia}
@@ -341,6 +369,16 @@ const LessonDetails = () => {
           className="max-w-screen max-h-screen"
         />
       )}
+      {/* Game Selection Dialog*/}
+      <GameSelectionDialog
+        isOpen={showGameDialog}
+        onClose={() => setShowGameDialog(false)}
+        onSelectGame={(gameId) => {
+          setSelectedGame(gameId);
+          setShowGameDialog(false);
+          fetchGames();
+        }}
+      />
     </div>
   );
 };

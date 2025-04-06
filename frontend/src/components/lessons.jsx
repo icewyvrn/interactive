@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import Header from '@/components/header';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
   Plus,
   BookOpen,
@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 const Lessons = () => {
   const navigate = useNavigate();
@@ -70,6 +71,7 @@ const Lessons = () => {
         setNewLessonTitle('');
         fetchLessons();
       }
+      toast.success('Lesson created successfully!');
     } catch (error) {
       setError('Failed to add lesson');
       console.error('Error:', error);
@@ -90,7 +92,7 @@ const Lessons = () => {
           </h1>
           <Button
             onClick={() => setIsDialogOpen(true)}
-            className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+            className="bg-indigo-700 text-white hover:bg-indigo-800"
           >
             <Plus className="w-4 h-4" />
             Add Lesson
@@ -126,7 +128,7 @@ const Lessons = () => {
                 Cancel
               </Button>
               <Button
-                className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                className="bg-indigo-700 text-white hover:bg-indigo-800"
                 onClick={handleAddLesson}
                 disabled={!newLessonTitle.trim()}
               >
@@ -151,9 +153,9 @@ const Lessons = () => {
             </p>
             <Button
               onClick={() => setIsDialogOpen(true)}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-indigo-700 text-white hover:bg-indigo-800"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-4 h-4" />
               Create First Lesson
             </Button>
           </div>
