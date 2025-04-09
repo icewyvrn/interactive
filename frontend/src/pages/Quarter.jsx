@@ -70,7 +70,12 @@ const Quarter = () => {
       <Header />
 
       <main className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6 text-gray-800">Quarter</h1>
+        <nav
+          className="flex items-center text-2xl font-bold mb-6"
+          aria-label="Breadcrumb"
+        >
+          <span className="text-gray-800">Quarter</span>
+        </nav>
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded">

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Header from '@/components/header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -23,10 +23,11 @@ import axios from 'axios';
 import ImageViewer from '../components/image-viewer';
 import VideoViewer from '../components/video-viewer';
 import GameSelectionDialog from '../components/game-select';
-import DragDropGame from '../components/game-play/drag-drop';
+import GamePreviewCard from '../components/game-preview-card';
 
 const LessonDetails = () => {
   const { quarterId, lessonId } = useParams();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('presentations');
   const [presentations, setPresentations] = useState([]);
   const [selectedGame, setSelectedGame] = useState(null);
@@ -37,6 +38,7 @@ const LessonDetails = () => {
   const [showGameDialog, setShowGameDialog] = useState(false);
   const [games, setGames] = useState([]);
   const [isLoadingGames, setIsLoadingGames] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Fetch lesson details
   useEffect(() => {
@@ -161,10 +163,42 @@ const LessonDetails = () => {
   };
 
   const handlePlayGame = (game) => {
-    {
-      /* TODO: Implement a game play logic here */
+    if (game.game_type === 'drag-drop') {
+      navigate(
+        `/quarter/${quarterId}/lesson/${lessonId}/game/drag-drop/${game.id}`
+      );
+    } else if (game.game_type === 'matching') {
+      navigate(
+        `/quarter/${quarterId}/lesson/${lessonId}/game/matching/${game.id}`
+      );
+    } else if (game.game_type === 'multiple-choice') {
+      navigate(
+        `/quarter/${quarterId}/lesson/${lessonId}/game/multiple-choice/${game.id}`
+      );
+    } else {
+      // Default fallback
+      navigate(
+        `/quarter/${quarterId}/lesson/${lessonId}/game/drag-drop/${game.id}`
+      );
     }
-    console.log('Playing game:', game);
+  };
+
+  const getImagePresentations = () => {
+    return presentations.filter((p) => p.content_type === 'image');
+  };
+
+  const handlePresentationClick = (presentation) => {
+    if (presentation.content_type === 'powerpoint') {
+      handleDownload(presentation);
+    } else {
+      setSelectedMedia(presentation);
+      if (presentation.content_type === 'image') {
+        const imagePresentations = getImagePresentations();
+        setCurrentImageIndex(
+          imagePresentations.findIndex((p) => p.id === presentation.id)
+        );
+      }
+    }
   };
 
   return (
@@ -172,17 +206,36 @@ const LessonDetails = () => {
       <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold flex items-center">
-            Quarter <ChevronRight className="mx-1 h-5 w-5" /> Lessons{' '}
-            <ChevronRight className="mx-1 h-5 w-5" />
+          <nav
+            className="flex items-center text-2xl font-bold"
+            aria-label="Breadcrumb"
+          >
+            <Button
+              onClick={() => navigate('/quarter')}
+              variant="link"
+              className="p-0 h-auto font-bold text-2xl hover:underline hover:text-inherit"
+            >
+              Quarter
+            </Button>
+            <ChevronRight className="mx-1 h-5 w-5 flex-shrink-0 text-gray-400" />
+            <Button
+              onClick={() => navigate(`/quarter/${quarterId}`)}
+              variant="link"
+              className="p-0 h-auto font-bold text-2xl hover:underline hover:text-inherit"
+            >
+              Lessons
+            </Button>
+            <ChevronRight className="mx-1 h-5 w-5 flex-shrink-0 text-gray-400" />
             {lesson ? (
-              `Lesson ${lesson.lesson_number}`
+              <span className="text-gray-800">
+                Lesson {lesson.lesson_number}
+              </span>
             ) : (
               <span className="flex items-center">
                 Lesson <Loader2 className="ml-2 h-4 w-4 animate-spin" />
               </span>
             )}
-          </h1>
+          </nav>
           <Separator className="my-4" />
         </div>
 
@@ -196,7 +249,8 @@ const LessonDetails = () => {
               <TabsTrigger value="presentations">Presentations</TabsTrigger>
               <TabsTrigger value="games">Games</TabsTrigger>
             </TabsList>
-            {activeTab === 'games' && (
+            {/* Only show Add Game button when there are no games */}
+            {activeTab === 'games' && games.length === 0 && (
               <Button
                 variant="outline"
                 size="default"
@@ -227,57 +281,60 @@ const LessonDetails = () => {
                 {presentations.map((presentation) => (
                   <Card
                     key={presentation.id}
-                    className="overflow-hidden hover:shadow-lg transition-all duration-300 border-slate-200 group relative"
+                    className="group relative overflow-hidden rounded-xl border-0 bg-white shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
                   >
                     <div
                       className="cursor-pointer"
-                      onClick={() => {
-                        if (presentation.content_type === 'powerpoint') {
-                          handleDownload(presentation);
-                        } else {
-                          setSelectedMedia(presentation);
-                        }
-                      }}
+                      onClick={() => handlePresentationClick(presentation)}
                     >
-                      <div className="relative">
+                      {/* Media Preview Section */}
+                      <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
                         {presentation.content_type === 'image' ? (
-                          <div className="h-52 overflow-hidden bg-slate-100">
+                          <>
                             <img
                               src={getMediaUrl(presentation)}
                               alt={presentation.file_url}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                             />
-                          </div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </>
                         ) : presentation.content_type === 'video' ? (
-                          <div className="h-52 overflow-hidden bg-slate-100">
+                          <>
                             <video
                               src={getMediaUrl(presentation)}
-                              className="w-full h-full object-cover"
+                              className="h-full w-full object-cover"
                             />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <FileVideo className="w-12 h-12 text-white drop-shadow-md" />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity group-hover:bg-black/50">
+                              <FileVideo className="h-16 w-16 text-white/90 drop-shadow-lg" />
                             </div>
-                          </div>
+                          </>
                         ) : (
-                          <div className="bg-slate-100 h-52 flex items-center justify-center group-hover:bg-slate-200 transition-colors">
-                            <FileType className="w-16 h-16 text-slate-400" />
+                          <div className="flex h-full items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 group-hover:from-slate-100 group-hover:to-slate-200 transition-colors">
+                            <div className="text-center">
+                              <FileType className="mx-auto h-16 w-16 text-slate-400 mb-2" />
+                              <span className="text-sm font-medium text-slate-600">
+                                PowerPoint
+                              </span>
+                            </div>
                           </div>
                         )}
 
+                        {/* Type Badge */}
                         <div className="absolute top-3 right-3">
-                          <div className="bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium shadow-sm">
+                          <div className="backdrop-blur-md bg-white/90 rounded-full px-3 py-1.5 text-xs font-medium shadow-sm border border-white/20">
                             {presentation.content_type === 'powerpoint'
                               ? 'PPT'
-                              : presentation.content_type}
+                              : presentation.content_type.toUpperCase()}
                           </div>
                         </div>
                       </div>
 
-                      <CardHeader className="pt-6 pb-2">
-                        <CardTitle className="text-base font-medium flex items-center justify-between">
-                          <div className="flex items-center gap-2 truncate mr-2">
+                      {/* Content Info */}
+                      <div className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
                             {getFileTypeIcon(presentation.content_type)}
-                            <span className="truncate">
+                            <h3 className="font-medium text-slate-700">
                               {getContentTitle(
                                 presentation.content_type,
                                 presentations.filter(
@@ -287,25 +344,59 @@ const LessonDetails = () => {
                                     p.id <= presentation.id
                                 )
                               )}
-                            </span>
+                            </h3>
                           </div>
+
+                          {/* Download button for PowerPoint */}
                           {presentation.content_type === 'powerpoint' && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 px-2 text-blue-600 flex-shrink-0"
+                              className="h-8 px-3 text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-colors"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDownload(presentation);
                               }}
                             >
-                              <Download className="w-4 h-4 mr-1" />
+                              <Download className="w-4 h-4 mr-1.5" />
                               Download
                             </Button>
                           )}
-                        </CardTitle>
-                      </CardHeader>
+                        </div>
+
+                        {/* Upload Date */}
+                        <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span>
+                            Uploaded{' '}
+                            {new Date(
+                              presentation.created_at
+                            ).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
                     </div>
+
+                    {/* Hover Overlay for Images and Videos */}
+                    {(presentation.content_type === 'image' ||
+                      presentation.content_type === 'video') && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all group-hover:bg-black/20 group-hover:opacity-100">
+                        <div className="transform translate-y-4 transition-transform group-hover:translate-y-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="bg-white/90 text-slate-800 hover:bg-white"
+                            onClick={() =>
+                              handlePresentationClick(presentation)
+                            }
+                          >
+                            {presentation.content_type === 'image'
+                              ? 'View Image'
+                              : 'Play Video'}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </Card>
                 ))}
               </div>
@@ -329,9 +420,9 @@ const LessonDetails = () => {
                 <span className="text-gray-500">Loading games...</span>
               </div>
             ) : games.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="space-y-6">
                 {games.map((game) => (
-                  <DragDropGame
+                  <GamePreviewCard
                     key={game.id}
                     game={game}
                     onPlay={handlePlayGame}
@@ -339,7 +430,7 @@ const LessonDetails = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-64 bg-gray-100 rounded-lg">
+              <div className="text-center py-24 bg-gray-100 rounded-lg">
                 <Gamepad2 className="mx-auto h-10 w-10 text-gray-400 mb-2" />
                 <p className="text-gray-500 mb-2">
                   No games created for this lesson yet
@@ -359,6 +450,13 @@ const LessonDetails = () => {
           onClose={() => setSelectedMedia(null)}
           imageUrl={getMediaUrl(selectedMedia)}
           className="max-w-screen max-h-screen"
+          images={getImagePresentations()}
+          currentIndex={currentImageIndex}
+          onNavigate={(newIndex) => {
+            const imagePresentations = getImagePresentations();
+            setCurrentImageIndex(newIndex);
+            setSelectedMedia(imagePresentations[newIndex]);
+          }}
         />
       )}
       {selectedMedia?.content_type === 'video' && (

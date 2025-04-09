@@ -8,9 +8,14 @@ import {
 } from '@/components/ui/dialog';
 import { SquareMousePointer, ArrowRightLeft, LayoutList } from 'lucide-react';
 import DragDropSettings from './game-settings/drag-drop';
+import MatchingGameSettings from './game-settings/matching-game';
+import MultipleChoiceSettings from './game-settings/multiple-choice';
 
 const GameSelectionDialog = ({ isOpen, onClose, onSelectGame }) => {
   const [showDragDropSettings, setShowDragDropSettings] = useState(false);
+  const [showMatchingSettings, setShowMatchingSettings] = useState(false);
+  const [showMultipleChoiceSettings, setShowMultipleChoiceSettings] =
+    useState(false);
   const [showGameSelect, setShowGameSelect] = useState(true);
 
   const games = [
@@ -37,9 +42,14 @@ const GameSelectionDialog = ({ isOpen, onClose, onSelectGame }) => {
   ];
 
   const handleGameSelect = (gameId) => {
+    setShowGameSelect(false);
+
     if (gameId === 'drag-and-drop') {
-      setShowGameSelect(false);
       setShowDragDropSettings(true);
+    } else if (gameId === 'matching') {
+      setShowMatchingSettings(true);
+    } else if (gameId === 'multiple-choice') {
+      setShowMultipleChoiceSettings(true);
     } else {
       onSelectGame(gameId);
       onClose();
@@ -48,12 +58,26 @@ const GameSelectionDialog = ({ isOpen, onClose, onSelectGame }) => {
 
   const handleBackToGameSelect = () => {
     setShowDragDropSettings(false);
+    setShowMatchingSettings(false);
+    setShowMultipleChoiceSettings(false);
     setShowGameSelect(true);
   };
 
   const handleDragDropSubmit = (settings) => {
     onSelectGame('drag-and-drop', settings);
     setShowDragDropSettings(false);
+    onClose();
+  };
+
+  const handleMatchingSubmit = (settings) => {
+    onSelectGame('matching', settings);
+    setShowMatchingSettings(false);
+    onClose();
+  };
+
+  const handleMultipleChoiceSubmit = (settings) => {
+    onSelectGame('multiple-choice', settings);
+    setShowMultipleChoiceSettings(false);
     onClose();
   };
 
@@ -98,6 +122,22 @@ const GameSelectionDialog = ({ isOpen, onClose, onSelectGame }) => {
         onClose={onClose}
         onBack={handleBackToGameSelect}
         onSubmit={handleDragDropSubmit}
+      />
+
+      {/* Matching Game settings*/}
+      <MatchingGameSettings
+        isOpen={isOpen && showMatchingSettings}
+        onClose={onClose}
+        onBack={handleBackToGameSelect}
+        onSubmit={handleMatchingSubmit}
+      />
+
+      {/* Multiple Choice settings*/}
+      <MultipleChoiceSettings
+        isOpen={isOpen && showMultipleChoiceSettings}
+        onClose={onClose}
+        onBack={handleBackToGameSelect}
+        onSubmit={handleMultipleChoiceSubmit}
       />
     </Dialog>
   );

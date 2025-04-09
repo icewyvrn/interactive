@@ -87,9 +87,20 @@ const Lessons = () => {
       <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold flex items-center">
-            Quarter <ChevronRight className="mx-1 h-5 w-5" /> Lessons
-          </h1>
+          <nav
+            className="flex items-center text-2xl font-bold"
+            aria-label="Breadcrumb"
+          >
+            <Button
+              onClick={() => navigate('/quarter')}
+              variant="link"
+              className="p-0 h-auto font-bold text-2xl hover:underline hover:text-inherit"
+            >
+              Quarter
+            </Button>
+            <ChevronRight className="mx-1 h-5 w-5 flex-shrink-0 text-gray-400" />
+            <span className="text-gray-800">Lessons</span>
+          </nav>
           <Button
             onClick={() => setIsDialogOpen(true)}
             className="bg-indigo-700 text-white hover:bg-indigo-800"

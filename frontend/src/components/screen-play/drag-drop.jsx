@@ -19,6 +19,11 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import Header from '../header';
 
+const replaceBlankWithUniform = (text, replacement = '________') => {
+  // This will match any number of consecutive underscores
+  return text.replace(/_{1,}/, replacement);
+};
+
 const ProgressBar = ({ current, total }) => {
   const progress = (current / total) * 100;
 
@@ -33,16 +38,18 @@ const ProgressBar = ({ current, total }) => {
 };
 
 // Reuse existing Draggable and Droppable components
-const Draggable = ({ id, children }) => {
+const Draggable = ({ id, children, disabled }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: id,
+      disabled: disabled,
     });
 
   const style = transform
     ? {
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        opacity: isDragging ? 0.5 : undefined,
+        transition: 'none',
+        touchAction: 'none',
       }
     : undefined;
 
@@ -51,27 +58,35 @@ const Draggable = ({ id, children }) => {
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className="bg-gradient-to-r from-indigo-50 to-blue-50 p-4 rounded-xl border-2 border-indigo-200 cursor-move touch-none select-none"
       style={style}
+      className={`px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-lg font-medium rounded-xl shadow-md will-change-transform ${
+        disabled
+          ? 'opacity-50 cursor-not-allowed'
+          : 'cursor-move touch-none select-none hover:shadow-lg hover:-translate-y-0.5 transition-transform duration-200'
+      }`}
     >
       {children}
     </div>
   );
 };
 
-const Droppable = ({ id, children, isOver }) => {
+const Droppable = ({ id, children, isOver, disabled }) => {
   const { setNodeRef } = useDroppable({
     id: id,
+    disabled: disabled, // Add this line to disable dropping
   });
 
   return (
     <div
       ref={setNodeRef}
-      className={`min-w-[120px] min-h-[50px] p-3 rounded-xl transition-all duration-500 ${
-        isOver
-          ? 'bg-green-100 border-2 border-green-400 shadow-lg scale-105'
-          : 'bg-gray-100 border-2 border-dashed border-gray-300'
-      }`}
+      className={`min-w-[120px] min-h-[50px] p-3 rounded-xl transition-all duration-500 
+        ${
+          isOver && !disabled
+            ? 'bg-green-100 border-2 border-green-400 shadow-lg scale-105'
+            : disabled
+            ? 'bg-gray-50 border-2 border-gray-200'
+            : 'bg-gray-100 border-2 border-dashed border-gray-300'
+        }`}
     >
       {children}
     </div>
@@ -93,8 +108,8 @@ const GamePlay = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        delay: 150, // No delay for immediate response
-        tolerance: 5, // Small tolerance for unintentional movements
+        delay: 0,
+        tolerance: 0,
       },
     }),
     useSensor(KeyboardSensor)
@@ -165,6 +180,7 @@ const GamePlay = () => {
       }, 5000);
     } else {
       toast.error("That's not correct. Try again!", {
+        icon: '❌',
         duration: 5000,
       });
       setTimeout(() => {
@@ -192,10 +208,11 @@ const GamePlay = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white">
-      <Header className="bg-white shadow-md"></Header>
+      <Header className="bg-white shadow-md" />
 
-      <main className="max-w-4xl mx-auto px-4 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-4xl mx-auto px-4 py-8">
+        {/* Navigation */}
+        <div className="mb-8">
           <Button
             variant="ghost"
             size="sm"
@@ -206,16 +223,25 @@ const GamePlay = () => {
             Back to Lesson
           </Button>
         </div>
-        <div className="bg-white rounded-2xl shadow-xl p-10 space-y-10 border border-gray-100">
-          {/* Game Info Section */}
+
+        {/* Game Container */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12 space-y-8 border border-gray-100">
+          {/* Game Header */}
           <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-indigo-900 text-center">
-              Drag and Drop Game
-            </h1>
-            <div className="flex items-center gap-4 w-full">
-              <p className="text-sm text-gray-500 whitespace-nowrap">
-                Round {currentRound + 1} of {game.total_rounds}
+            <div className="text-center space-y-2">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
+                Fill in the Blank
+              </h1>
+              <p className="text-gray-600">
+                Drag the correct word to complete the sentence
               </p>
+            </div>
+            <div className="flex items-center gap-4 w-full">
+              <div className="bg-indigo-50 px-4 py-2 rounded-full">
+                <p className="text-sm font-medium text-indigo-700">
+                  Round {currentRound + 1} of {game.total_rounds}
+                </p>
+              </div>
               <div className="flex-grow">
                 <ProgressBar
                   current={currentRound + 1}
@@ -233,53 +259,65 @@ const GamePlay = () => {
             onDragOver={handleDragOver}
             modifiers={[restrictToWindowEdges]}
           >
-            <div className="flex items-center justify-center gap-3 text-3xl font-medium text-gray-800">
-              <span>{before}</span>
-              <Droppable id="blank" isOver={isOver}>
+            {/* Question Card */}
+            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-8 mb-8">
+              <div className="text-2xl md:text-3xl font-medium text-gray-800 text-center leading-relaxed">
+                {droppedAnswer && droppedAnswer.is_correct
+                  ? replaceBlankWithUniform(
+                      round.question_text,
+                      droppedAnswer.word
+                    )
+                  : replaceBlankWithUniform(round.question_text)}
+              </div>
+            </div>
+
+            {/* Answer Section */}
+            <div className="flex flex-col items-center gap-6">
+              <p className="text-lg font-medium text-gray-700">Your Answer</p>
+              <Droppable id="blank" isOver={isOver} disabled={isCorrect}>
                 {droppedAnswer ? (
                   <div
-                    className={`p-3 rounded-xl transition-all duration-500 font-semibold ${
+                    className={`p-6 min-w-[250px] text-center rounded-xl transition-all duration-500 font-semibold text-lg ${
                       droppedAnswer.is_correct
-                        ? 'bg-green-100 text-green-700 border-2 border-green-400'
-                        : 'bg-red-100 text-red-700 border-2 border-red-400'
+                        ? 'bg-green-50 text-green-700 border-2 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]'
+                        : 'bg-red-50 text-red-700 border-2 border-red-400 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
                     }`}
                   >
                     {droppedAnswer.word}
                   </div>
                 ) : (
-                  <div className="h-10 w-28 flex items-center justify-center">
-                    <span className="text-gray-400 text-base">Drop here</span>
+                  <div className="h-20 w-64 flex items-center justify-center border-2 border-dashed border-indigo-200 rounded-xl bg-indigo-50/50 transition-all duration-300 hover:bg-indigo-50">
+                    <span className="text-indigo-400 font-medium">
+                      {isCorrect ? 'Correct answer!' : 'Drop your answer here'}
+                    </span>
                   </div>
                 )}
               </Droppable>
-              <span>{after}</span>
             </div>
 
-            <div className="flex justify-center gap-6 flex-wrap mt-12">
+            {/* Choices Section */}
+            <div className="flex justify-center gap-4 flex-wrap mt-12">
               {round.choices.map((choice) => (
-                <Draggable key={choice.id} id={choice.id}>
+                <Draggable key={choice.id} id={choice.id} disabled={isCorrect}>
                   {choice.word}
                 </Draggable>
               ))}
             </div>
-
-            <DragOverlay>
-              {activeId && (
-                <div className="bg-white p-4 rounded-xl shadow-2xl border-2 border-indigo-500 font-medium text-indigo-700">
-                  {round.choices.find((c) => c.id === activeId).word}
-                </div>
-              )}
-            </DragOverlay>
           </DndContext>
 
+          {/* Feedback Messages */}
           {isCorrect && (
-            <div className="text-center text-green-600 font-bold animate-bounce text-2xl bg-green-50 py-4 rounded-xl transition-all duration-1000">
-              Correct! Well done! 🎉
+            <div className="text-center text-green-600 font-bold animate-bounce text-2xl bg-green-50 py-6 rounded-xl transition-all duration-1000 shadow-lg shadow-green-100">
+              <span className="flex items-center justify-center gap-2">
+                Correct! Well done!
+                <span className="text-3xl">🎉</span>
+              </span>
             </div>
           )}
 
+          {/* Game Complete Screen */}
           {gameComplete && (
-            <div className="text-center space-y-6 bg-indigo-50 p-8 rounded-xl">
+            <div className="text-center space-y-6 bg-gradient-to-br from-indigo-50 to-blue-50 p-10 rounded-xl shadow-lg">
               <h3 className="text-3xl font-bold text-indigo-600">
                 Congratulations! 🎉
               </h3>
@@ -290,7 +328,7 @@ const GamePlay = () => {
                 onClick={() =>
                   navigate(`/quarter/${quarterId}/lesson/${lessonId}`)
                 }
-                className="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-md text-lg"
+                className="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-lg text-lg shadow-lg shadow-indigo-200 transition-all duration-300 hover:scale-105"
               >
                 Back to Lesson
               </Button>
