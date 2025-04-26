@@ -17,13 +17,79 @@ import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import axios from 'axios';
 
-const MultipleChoiceSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
+const MultipleChoiceSettings = ({
+  isOpen,
+  onClose,
+  onBack,
+  onSubmit,
+  gameToEdit = null,
+}) => {
   const { lessonId } = useParams();
-  const [totalRounds, setTotalRounds] = useState(3);
+  const [totalRounds, setTotalRounds] = useState(
+    gameToEdit ? gameToEdit.total_rounds : 3
+  );
   const [rounds, setRounds] = useState([]);
+  const [isEditMode, setIsEditMode] = useState(!!gameToEdit);
+  const [gameId, setGameId] = useState(gameToEdit?.id || null);
+
+  // Load game data if in edit mode
+  useEffect(() => {
+    if (gameToEdit && gameToEdit.game_type === 'multiple-choice') {
+      setIsEditMode(true);
+      setGameId(gameToEdit.id);
+      setTotalRounds(gameToEdit.total_rounds);
+
+      // If we have the full game data with rounds
+      if (gameToEdit.rounds) {
+        const formattedRounds = gameToEdit.rounds.map((round) => ({
+          question: round.question,
+          choices: round.choices.map((choice) => ({
+            text: choice.choice_text,
+            isCorrect: choice.is_correct,
+            displayOrder: choice.display_order,
+          })),
+        }));
+        setRounds(formattedRounds);
+      } else {
+        // If we only have the game ID, fetch the full game data
+        fetchGameData(gameToEdit.id);
+      }
+    }
+  }, [gameToEdit]);
+
+  // Fetch game data for editing
+  const fetchGameData = async (id) => {
+    try {
+      const response = await axios.get(`/api/game/games/multiple-choice/${id}`);
+      if (response.data.success) {
+        const game = response.data.game;
+        if (game.game_type !== 'multiple-choice') {
+          toast.error('Invalid game type');
+          return;
+        }
+        setTotalRounds(game.total_rounds);
+
+        const formattedRounds = game.rounds.map((round) => ({
+          question: round.question,
+          choices: round.choices.map((choice) => ({
+            text: choice.choice_text,
+            isCorrect: choice.is_correct,
+            displayOrder: choice.display_order,
+          })),
+        }));
+        setRounds(formattedRounds);
+      }
+    } catch (error) {
+      console.error('Error fetching game data:', error);
+      toast.error('Failed to load game data for editing');
+    }
+  };
 
   // Initialize or update rounds when totalRounds changes
   useEffect(() => {
+    // Skip this effect if we're in edit mode and already have rounds data
+    if (isEditMode && rounds.length > 0) return;
+
     setRounds((prevRounds) => {
       const newRounds = [...prevRounds];
       // Add new rounds if needed
@@ -44,7 +110,7 @@ const MultipleChoiceSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
       }
       return newRounds;
     });
-  }, [totalRounds]);
+  }, [totalRounds, isEditMode, rounds.length]);
 
   const updateQuestion = (roundIndex, question) => {
     setRounds((prevRounds) => {
@@ -181,7 +247,7 @@ const MultipleChoiceSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
           choices: round.choices.map((choice, index) => ({
             text: choice.text.trim(),
             isCorrect: choice.isCorrect,
-            displayOrder: index + 1,
+            displayOrder: choice.displayOrder || index + 1,
           })),
         };
       });
@@ -192,22 +258,43 @@ const MultipleChoiceSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
         rounds: processedRounds,
       };
 
-      // API endpoint for multiple choice game
-      const response = await axios.post(
-        `/api/game/lessons/${lessonId}/games/multiple-choice`,
-        gameData
-      );
+      let response;
 
-      if (response.data.success) {
-        toast.success('Multiple choice game created successfully!');
-        onSubmit(gameData);
+      if (isEditMode) {
+        // Update existing game
+        response = await axios.put(
+          `/api/game/games/multiple-choice/${gameId}`,
+          gameData
+        );
+        if (response.data.success) {
+          toast.success('Game updated successfully!');
+          onSubmit(response.data.game);
+          onClose();
+        } else {
+          toast.error('Failed to update game');
+        }
       } else {
-        toast.error('Failed to create game');
+        // Create new game
+        response = await axios.post(
+          `/api/game/lessons/${lessonId}/games/multiple-choice`,
+          gameData
+        );
+        if (response.data.success) {
+          toast.success('Multiple choice game created successfully!');
+          onSubmit(response.data.game);
+          onClose();
+        } else {
+          toast.error('Failed to create game');
+        }
       }
     } catch (error) {
-      console.error('Error creating multiple choice game:', error);
+      console.error(
+        `Error ${isEditMode ? 'updating' : 'creating'} game:`,
+        error
+      );
       toast.error(
-        error.response?.data?.message || 'Failed to create multiple choice game'
+        error.response?.data?.message ||
+          `Failed to ${isEditMode ? 'update' : 'create'} game`
       );
     }
   };
@@ -227,10 +314,12 @@ const MultipleChoiceSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
             </Button>
             <div>
               <DialogTitle className="text-2xl font-bold">
-                Multiple Choice Game Settings
+                {isEditMode ? 'Edit' : 'Create'} Multiple Choice Game
               </DialogTitle>
               <DialogDescription className="text-gray-500">
-                Create a multiple choice quiz with questions and answer options.
+                {isEditMode
+                  ? 'Edit your multiple choice quiz with one correct answer per question.'
+                  : 'Create a multiple choice quiz with one correct answer per question.'}
               </DialogDescription>
             </div>
           </div>
@@ -351,7 +440,7 @@ const MultipleChoiceSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
             className="bg-indigo-700 text-white hover:bg-indigo-800"
             onClick={handleSubmit}
           >
-            Create Game
+            {isEditMode ? 'Update Game' : 'Create Game'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, ArrowRight } from 'lucide-react';
 import Header from '@/components/header';
+import QuarterBackground from '../components/QuarterBackground';
 
 const Quarter = () => {
   const [quarters, setQuarters] = useState([]);
@@ -66,84 +67,88 @@ const Quarter = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
+    <QuarterBackground>
+      <div className="min-h-screen">
+        <Header />
 
-      <main className="container mx-auto px-4 py-8">
-        <nav
-          className="flex items-center text-2xl font-bold mb-6"
-          aria-label="Breadcrumb"
-        >
-          <span className="text-gray-800">Quarter</span>
-        </nav>
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded">
-            {error}
+        <main className="container mx-auto px-4 py-8">
+          <div className="bg-white/90 backdrop-blur-sm shadow-md rounded-xl p-4 flex justify-between items-center mb-8">
+            <nav
+              className="flex items-center text-2xl font-bold"
+              aria-label="Breadcrumb"
+            >
+              <span className="text-gray-800">Quarter</span>
+            </nav>
           </div>
-        )}
 
-        <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {quarters.map((quarter, index) => (
-              <Card
-                key={quarter.id}
-                className="overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border-0 rounded-lg p-0 flex flex-col"
-                style={{ height: '240px' }}
-                onClick={() => navigate(`/quarter/${quarter.id}`)}
-              >
-                <div
-                  className={`${
-                    cardColors[index % cardColors.length]
-                  } w-full relative rounded-t-lg`}
-                  style={{ height: '40%' }}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+
+          <div className="max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {quarters.map((quarter, index) => (
+                <Card
+                  key={quarter.id}
+                  className="overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border-0 rounded-lg p-0 flex flex-col"
+                  style={{ height: '320px' }}
+                  onClick={() => navigate(`/quarter/${quarter.id}`)}
                 >
-                  {/* Quarter avatar - improved design */}
                   <div
-                    className="absolute top-1/2 transform -translate-y-1/2 w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center border-4 border-white overflow-hidden"
-                    style={{ right: '16px' }}
+                    className={`${
+                      cardColors[index % cardColors.length]
+                    } w-full relative rounded-t-lg`}
+                    style={{ height: '40%' }}
                   >
-                    <span
-                      className={`font-bold text-md ${cardColors[
-                        index % cardColors.length
-                      ].replace('bg-', 'text-')}`}
+                    {/* Quarter avatar - improved design */}
+                    <div
+                      className="absolute top-1/2 transform -translate-y-1/2 w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center border-4 border-white overflow-hidden"
+                      style={{ right: '16px' }}
                     >
-                      {getQuarterAbbreviation(quarter.name)}
-                    </span>
-                  </div>
-
-                  <div className="absolute bottom-4 left-4">
-                    <h3 className="text-white font-medium text-xl">
-                      {quarter.name}
-                    </h3>
-                  </div>
-                </div>
-                <CardContent className="bg-white p-5 flex-1 flex flex-col justify-between">
-                  <p className="text-gray-700 line-clamp-3">
-                    {quarter.description}
-                  </p>
-
-                  <div className="border-t border-gray-200 -mx-5 px-5 pt-3 mt-4">
-                    <div className="flex justify-end">
-                      <button
-                        className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent card click from triggering
-                          navigate(`/quarter/${quarter.id}`);
-                        }}
+                      <span
+                        className={`font-bold text-md ${cardColors[
+                          index % cardColors.length
+                        ].replace('bg-', 'text-')}`}
                       >
-                        View
-                        <ArrowRight className="ml-1 h-4 w-4" />
-                      </button>
+                        {getQuarterAbbreviation(quarter.name)}
+                      </span>
+                    </div>
+
+                    <div className="absolute bottom-4 left-4">
+                      <h3 className="text-white font-medium text-xl">
+                        {quarter.name}
+                      </h3>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                  <CardContent className="bg-white p-5 flex-1 flex flex-col justify-between">
+                    <p className="text-gray-700 line-clamp-3">
+                      {quarter.description}
+                    </p>
+
+                    <div className="border-t border-gray-200 -mx-5 px-5 pt-3 mt-4">
+                      <div className="flex justify-end">
+                        <button
+                          className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent card click from triggering
+                            navigate(`/quarter/${quarter.id}`);
+                          }}
+                        >
+                          View
+                          <ArrowRight className="ml-1 h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
+    </QuarterBackground>
   );
 };
 

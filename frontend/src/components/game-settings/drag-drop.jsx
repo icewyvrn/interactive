@@ -11,19 +11,86 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Info, ChevronLeft, Plus, Trash2 } from 'lucide-react';
+import { Info, ChevronLeft, Plus, Trash2, Image, Link2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import axios from 'axios';
 
-const DragDropSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
+const DragDropSettings = ({
+  isOpen,
+  onClose,
+  onBack,
+  onSubmit,
+  gameToEdit = null,
+}) => {
   const { lessonId } = useParams();
-  const [totalRounds, setTotalRounds] = useState(3);
+  const [totalRounds, setTotalRounds] = useState(
+    gameToEdit ? gameToEdit.total_rounds : 3
+  );
   const [rounds, setRounds] = useState([]);
+  const [isEditMode, setIsEditMode] = useState(!!gameToEdit);
+  const [gameId, setGameId] = useState(gameToEdit?.id || null);
+
+  // Load game data if in edit mode
+  useEffect(() => {
+    if (gameToEdit && gameToEdit.game_type === 'drag-drop') {
+      setIsEditMode(true);
+      setGameId(gameToEdit.id);
+      setTotalRounds(gameToEdit.total_rounds);
+
+      // If we have the full game data with rounds
+      if (gameToEdit.rounds) {
+        const formattedRounds = gameToEdit.rounds.map((round) => ({
+          questionText: round.question_text,
+          blankPosition: round.blank_position,
+          choices: round.choices.map((choice) => ({
+            word: choice.word || '',
+            image: choice.image_url || null,
+            isCorrect: choice.is_correct,
+          })),
+        }));
+        setRounds(formattedRounds);
+      } else {
+        // If we only have the game ID, fetch the full game data
+        fetchGameData(gameToEdit.id);
+      }
+    }
+  }, [gameToEdit]);
+
+  // Fetch game data for editing
+  const fetchGameData = async (id) => {
+    try {
+      const response = await axios.get(`/api/game/games/drag-drop/${id}`);
+      if (response.data.success) {
+        const game = response.data.game;
+        if (game.game_type !== 'drag-drop') {
+          toast.error('Invalid game type');
+          return;
+        }
+        setTotalRounds(game.total_rounds);
+
+        const formattedRounds = game.rounds.map((round) => ({
+          questionText: round.question_text,
+          blankPosition: round.blank_position,
+          choices: round.choices.map((choice) => ({
+            word: choice.word,
+            isCorrect: choice.is_correct,
+          })),
+        }));
+        setRounds(formattedRounds);
+      }
+    } catch (error) {
+      console.error('Error fetching game data:', error);
+      toast.error('Failed to load game data for editing');
+    }
+  };
 
   // Initialize or update rounds when totalRounds changes
   useEffect(() => {
+    // Skip this effect if we're in edit mode and already have rounds data
+    if (isEditMode && rounds.length > 0) return;
+
     setRounds((prevRounds) => {
       const newRounds = [...prevRounds];
       // Add new rounds if needed
@@ -32,9 +99,9 @@ const DragDropSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
           questionText: '',
           blankPosition: 0,
           choices: [
-            { word: '', isCorrect: false },
-            { word: '', isCorrect: false },
-            { word: '', isCorrect: false },
+            { word: '', image: null, isCorrect: false },
+            { word: '', image: null, isCorrect: false },
+            { word: '', image: null, isCorrect: false },
           ],
         });
       }
@@ -44,7 +111,7 @@ const DragDropSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
       }
       return newRounds;
     });
-  }, [totalRounds]);
+  }, [totalRounds, isEditMode, rounds.length]);
 
   const handleQuestionChange = (roundIndex, value) => {
     setRounds((prevRounds) => {
@@ -62,6 +129,71 @@ const DragDropSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
     });
   };
 
+  const addChoice = (roundIndex) => {
+    setRounds((prevRounds) => {
+      const newRounds = [...prevRounds];
+      newRounds[roundIndex].choices.push({
+        word: '',
+        image: null,
+        isCorrect: false,
+      });
+      return newRounds;
+    });
+  };
+
+  const handleFileUpload = async (roundIndex, choiceIndex, file) => {
+    if (!file) return;
+
+    // Check file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please upload a valid image file (JPEG, PNG, GIF)');
+      return;
+    }
+
+    // Check file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('File size should be less than 2MB');
+      return;
+    }
+
+    try {
+      // Show loading toast
+      const loadingToast = toast.loading('Uploading image...');
+
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await axios.post(`/api/game/upload-image`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+
+      if (response.data.success) {
+        const fileUrl = response.data.imageUrl;
+
+        // Update the choice with the file URL
+        setRounds((prevRounds) => {
+          const newRounds = [...prevRounds];
+          newRounds[roundIndex].choices[choiceIndex].image = fileUrl;
+          return newRounds;
+        });
+
+        toast.success('Image uploaded successfully');
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error(
+        'Failed to upload image: ' +
+          (error.response?.data?.message || error.message)
+      );
+    }
+  };
+
   const handleCorrectAnswerChange = (roundIndex, choiceIndex) => {
     setRounds((prevRounds) => {
       const newRounds = [...prevRounds];
@@ -74,20 +206,6 @@ const DragDropSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
       return newRounds;
     });
   };
-
-  const addChoice = React.useCallback((roundIndex) => {
-    setRounds((prevRounds) => {
-      const newRounds = [...prevRounds];
-      newRounds[roundIndex] = {
-        ...newRounds[roundIndex],
-        choices: [
-          ...newRounds[roundIndex].choices,
-          { word: '', isCorrect: false },
-        ],
-      };
-      return newRounds;
-    });
-  }, []);
 
   const removeChoice = (roundIndex, choiceIndex) => {
     setRounds((prevRounds) => {
@@ -118,10 +236,14 @@ const DragDropSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
         return false;
       }
 
-      // Check if all choices have words
-      const emptyChoices = round.choices.some((choice) => !choice.word.trim());
-      if (emptyChoices) {
-        toast.error(`Round ${i + 1}: All choices must have text`);
+      // Check if all choices have either words or images
+      const invalidChoices = round.choices.some(
+        (choice) => !choice.word.trim() && !choice.image
+      );
+      if (invalidChoices) {
+        toast.error(
+          `Round ${i + 1}: All choices must have either text or an image`
+        );
         return false;
       }
     }
@@ -142,7 +264,8 @@ const DragDropSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
           questionText: round.questionText,
           blankPosition,
           choices: round.choices.map((choice) => ({
-            word: choice.word.trim(),
+            word: choice.word.trim() || null,
+            imageUrl: choice.image || null,
             isCorrect: choice.isCorrect,
           })),
         };
@@ -154,22 +277,44 @@ const DragDropSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
         rounds: processedRounds,
       };
 
-      // Updated API endpoint to match backend route
-      const response = await axios.post(
-        `/api/game/lessons/${lessonId}/games/drag-drop`,
-        gameData
-      );
+      let response;
 
-      if (response.data.success) {
-        toast.success('Game created successfully!');
-        onSubmit(response.data.game);
-        onClose();
+      if (isEditMode) {
+        // Update existing game
+        response = await axios.put(
+          `/api/game/games/drag-drop/${gameId}`,
+          gameData
+        );
+        if (response.data.success) {
+          toast.success('Game updated successfully!');
+          onSubmit(response.data.game);
+          onClose();
+        } else {
+          toast.error('Failed to update game');
+        }
       } else {
-        toast.error('Failed to create game');
+        // Create new game
+        response = await axios.post(
+          `/api/game/lessons/${lessonId}/games/drag-drop`,
+          gameData
+        );
+        if (response.data.success) {
+          toast.success('Game created successfully!');
+          onSubmit(response.data.game);
+          onClose();
+        } else {
+          toast.error('Failed to create game');
+        }
       }
     } catch (error) {
-      console.error('Error creating game:', error);
-      toast.error(error.response?.data?.message || 'Failed to create game');
+      console.error(
+        `Error ${isEditMode ? 'updating' : 'creating'} game:`,
+        error
+      );
+      toast.error(
+        error.response?.data?.message ||
+          `Failed to ${isEditMode ? 'update' : 'create'} game`
+      );
     }
   };
 
@@ -188,11 +333,12 @@ const DragDropSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
             </Button>
             <div>
               <DialogTitle className="text-2xl font-bold">
-                Drag and Drop Game Settings
+                {isEditMode ? 'Edit' : 'Create'} Drag and Drop Game
               </DialogTitle>
               <DialogDescription className="text-gray-500">
-                Configure your drag and drop game settings before creating the
-                rounds.
+                {isEditMode
+                  ? 'Edit your drag and drop game settings and rounds.'
+                  : 'Configure your drag and drop game settings before creating the rounds.'}
               </DialogDescription>
             </div>
           </div>
@@ -261,44 +407,118 @@ const DragDropSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
                   </div>
 
                   {round.choices.map((choice, choiceIndex) => (
-                    <div key={choiceIndex} className="flex items-center gap-2">
+                    <div
+                      key={choiceIndex}
+                      className="space-y-2 border p-3 rounded-md"
+                    >
                       <div className="flex items-center gap-2">
-                        <Checkbox
-                          id={`correct-${roundIndex}-${choiceIndex}`}
-                          checked={choice.isCorrect}
-                          onCheckedChange={() =>
-                            handleCorrectAnswerChange(roundIndex, choiceIndex)
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id={`correct-${roundIndex}-${choiceIndex}`}
+                            checked={choice.isCorrect}
+                            onCheckedChange={() =>
+                              handleCorrectAnswerChange(roundIndex, choiceIndex)
+                            }
+                          />
+                          <Label
+                            htmlFor={`correct-${roundIndex}-${choiceIndex}`}
+                            className="text-sm text-gray-600"
+                          >
+                            Correct Answer
+                          </Label>
+                        </div>
+                        <Input
+                          value={choice.word}
+                          onChange={(e) =>
+                            handleChoiceChange(
+                              roundIndex,
+                              choiceIndex,
+                              e.target.value
+                            )
                           }
+                          placeholder={`Choice ${choiceIndex + 1}`}
+                          className="flex-1"
                         />
-                        <Label
-                          htmlFor={`correct-${roundIndex}-${choiceIndex}`}
-                          className="text-sm text-gray-600"
-                        >
-                          Correct Answer
-                        </Label>
+                        {round.choices.length > 2 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              removeChoice(roundIndex, choiceIndex)
+                            }
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        )}
                       </div>
-                      <Input
-                        value={choice.word}
-                        onChange={(e) =>
-                          handleChoiceChange(
-                            roundIndex,
-                            choiceIndex,
-                            e.target.value
-                          )
-                        }
-                        placeholder={`Choice ${choiceIndex + 1}`}
-                        className="flex-1"
-                      />
-                      {round.choices.length > 2 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeChoice(roundIndex, choiceIndex)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      )}
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="file"
+                            id={`image-${roundIndex}-${choiceIndex}`}
+                            className="hidden"
+                            accept="image/*"
+                            onChange={(e) =>
+                              handleFileUpload(
+                                roundIndex,
+                                choiceIndex,
+                                e.target.files[0]
+                              )
+                            }
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              document
+                                .getElementById(
+                                  `image-${roundIndex}-${choiceIndex}`
+                                )
+                                .click()
+                            }
+                          >
+                            <Image className="w-4 h-4 mr-1" />
+                            {choice.image ? 'Change Image' : 'Add Image'}
+                          </Button>
+
+                          {choice.image && (
+                            <span className="text-xs text-green-600 flex items-center">
+                              <Link2 className="w-3 h-3 mr-1" />
+                              Image uploaded
+                            </span>
+                          )}
+                        </div>
+
+                        {choice.image && (
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={`/uploads/${choice.image}`}
+                              alt="Choice image"
+                              className="h-10 w-auto object-contain"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setRounds((prevRounds) => {
+                                  const newRounds = [...prevRounds];
+                                  newRounds[roundIndex].choices[
+                                    choiceIndex
+                                  ].image = null;
+                                  return newRounds;
+                                });
+                              }}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -315,7 +535,7 @@ const DragDropSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
             onClick={handleSubmit}
             className="bg-indigo-700 text-white hover:bg-indigo-800"
           >
-            Create Game
+            {isEditMode ? 'Update Game' : 'Create Game'}
           </Button>
         </DialogFooter>
       </DialogContent>

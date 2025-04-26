@@ -13,10 +13,11 @@ import {
 import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, MoveRight, Check, Circle } from 'lucide-react';
+import { ArrowLeft, MoveRight, Check, Circle, Trophy } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import Header from '../header';
+import GameBackground from '../GameBackground';
 // No arrow functionality as requested
 
 const ProgressBar = ({ current, total }) => {
@@ -285,6 +286,16 @@ const MatchingGamePlay = () => {
     });
   };
 
+  const handlePlayAgain = () => {
+    setCurrentRound(0);
+    setMatches([]);
+    setGameComplete(false);
+  };
+
+  const handleBackToLesson = () => {
+    navigate(`/quarter/${quarterId}/lesson/${lessonId}`);
+  };
+
   // Check if an item is matched
   const isMatched = (itemId, itemType) => {
     // itemType can be 'first' or 'second'
@@ -302,193 +313,235 @@ const MatchingGamePlay = () => {
     }
   };
 
+  if (gameComplete) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-2xl w-full text-center">
+            <div className="mb-8">
+              <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trophy className="h-10 w-10 text-indigo-600" />
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Congratulations!
+              </h1>
+              <p className="text-gray-600">
+                You've successfully completed all matching challenges
+              </p>
+            </div>
+
+            <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-6 mb-8">
+              <h2 className="text-xl font-semibold mb-2">Game Complete</h2>
+              <p className="text-gray-600">
+                You've mastered all {game.total_rounds} rounds in this Matching
+                Game.
+              </p>
+            </div>
+
+            <div className="flex gap-4 justify-center">
+              <Button variant="outline" onClick={handleBackToLesson}>
+                Back to Lesson
+              </Button>
+              <Button onClick={handlePlayAgain}>Play Again</Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!game) return <div>Loading...</div>;
 
   const round = game.rounds[currentRound];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white">
-      <Header className="bg-white shadow-md" />
+    <GameBackground>
+      <div className="min-h-screen">
+        <Header className="bg-white shadow-md" />
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Navigation */}
-        <div className="mb-8">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(`/quarter/${quarterId}/lesson/${lessonId}`)}
-            className="hover:bg-indigo-50 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Lesson
-          </Button>
-        </div>
-
-        {/* Game Container */}
-        <div className="bg-white rounded-2xl shadow-xl p-6 md:p-10 space-y-6 border border-gray-100">
-          {/* Game Header */}
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
-                Matching Game
-              </h1>
-              <p className="text-gray-600">
-                Match the items on the left with their corresponding pairs on
-                the right
-              </p>
-            </div>
-            <div className="flex items-center gap-4 w-full">
-              <div className="bg-indigo-50 px-4 py-2 rounded-full">
-                <p className="text-sm font-medium text-indigo-700">
-                  Round {currentRound + 1} of {game.total_rounds}
-                </p>
-              </div>
-              <div className="flex-grow">
-                <ProgressBar
-                  current={currentRound + 1}
-                  total={game.total_rounds}
-                />
-              </div>
-            </div>
+        <main className="max-w-6xl mx-auto px-4 py-8">
+          {/* Navigation */}
+          <div className="mb-8">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                navigate(`/quarter/${quarterId}/lesson/${lessonId}`)
+              }
+              className="text-red-700 hover:text-red-700 hover:bg-gray-50 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Lesson
+            </Button>
           </div>
 
-          <DndContext
-            sensors={sensors}
-            collisionDetection={
-              pointerWithin
-            } /* Use pointerWithin for more precise collision detection */
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragOver={handleDragOver}
-            modifiers={[restrictToWindowEdges]}
-          >
-            {/* Matching Game Board */}
-            <div
-              className="flex justify-between h-[calc(100vh-300px)] min-h-[400px] mb-8 relative px-4 game-board-container"
-              style={{ maxWidth: '1400px', margin: '0 auto' }}
+          {/* Game Container */}
+          <div className="bg-white rounded-2xl shadow-xl p-6 md:p-10 space-y-6 border border-gray-100">
+            {/* Game Header */}
+            <div className="space-y-6">
+              <div className="text-center space-y-2">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
+                  Matching Game
+                </h1>
+                <p className="text-gray-600">
+                  Match the items on the left with their corresponding pairs on
+                  the right
+                </p>
+              </div>
+              <div className="flex items-center gap-4 w-full">
+                <div className="bg-indigo-50 px-4 py-2 rounded-full">
+                  <p className="text-sm font-medium text-indigo-700">
+                    Round {currentRound + 1} of {game.total_rounds}
+                  </p>
+                </div>
+                <div className="flex-grow">
+                  <ProgressBar
+                    current={currentRound + 1}
+                    total={game.total_rounds}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <DndContext
+              sensors={sensors}
+              collisionDetection={
+                pointerWithin
+              } /* Use pointerWithin for more precise collision detection */
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragOver={handleDragOver}
+              modifiers={[restrictToWindowEdges]}
             >
-              {/* No visual indicators for connections as arrows have been removed */}
-
-              {/* Left Column - First Choices */}
-              <div className="w-[40%] flex flex-col">
-                <h3 className="text-xl font-semibold text-center text-indigo-700 mb-6">
-                  Items
-                </h3>
-                <div className="flex-1 flex flex-col justify-around py-4">
-                  {round.first_choices.map((choice) => {
-                    const matched = isMatched(choice.id, 'first');
-                    return (
-                      <div
-                        key={choice.id}
-                        data-connector-id={choice.id}
-                        className={`relative bg-white p-5 rounded-xl shadow-md border ${
-                          matched
-                            ? 'border-green-300 bg-green-50'
-                            : 'border-gray-200'
-                        } flex items-center transition-all duration-300 hover:shadow-lg`}
-                      >
-                        <div className="flex-1 flex items-center justify-start">
-                          {choice.image_url ? (
-                            <img
-                              src={`/uploads/${choice.image_url}`}
-                              alt={choice.word || 'Image'}
-                              className="max-h-20 max-w-full object-contain mr-3"
-                            />
-                          ) : null}
-                          <span className="text-gray-800 font-medium text-lg">
-                            {choice.word}
-                          </span>
-                        </div>
-
-                        <DraggableConnector
-                          id={`connector-${choice.id}`}
-                          disabled={matched}
-                          matched={matched}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Center space - increased width */}
+              {/* Matching Game Board */}
               <div
-                className="h-full flex items-center justify-center"
-                style={{ width: '20%' }}
+                className="flex justify-between h-[calc(100vh-300px)] min-h-[400px] mb-8 relative px-4 game-board-container"
+                style={{ maxWidth: '1400px', margin: '0 auto' }}
               >
-                <div className="h-[80%] w-0.5 bg-gray-200 rounded-full"></div>
-              </div>
+                {/* No visual indicators for connections as arrows have been removed */}
 
-              {/* Right Column - Second Choices (Drop Targets) */}
-              <div className="w-[40%] flex flex-col">
-                <h3 className="text-xl font-semibold text-center text-indigo-700 mb-6">
-                  Matches
-                </h3>
-                <div className="flex-1 flex flex-col justify-around py-4">
-                  {round.second_choices.map((choice) => {
-                    const matched = isMatched(choice.id, 'second');
-                    const isCurrentOver =
-                      isOver && activeId && activeId.startsWith('connector-');
+                {/* Left Column - First Choices */}
+                <div className="w-[40%] flex flex-col">
+                  <h3 className="text-xl font-semibold text-center text-indigo-700 mb-6">
+                    Items
+                  </h3>
+                  <div className="flex-1 flex flex-col justify-around py-4">
+                    {round.first_choices.map((choice) => {
+                      const matched = isMatched(choice.id, 'first');
+                      return (
+                        <div
+                          key={choice.id}
+                          data-connector-id={choice.id}
+                          className={`relative bg-white p-5 rounded-xl shadow-md border ${
+                            matched
+                              ? 'border-green-300 bg-green-50'
+                              : 'border-gray-200'
+                          } flex items-center transition-all duration-300 hover:shadow-lg`}
+                        >
+                          <div className="flex-1 flex items-center justify-start">
+                            {choice.image_url ? (
+                              <img
+                                src={`/uploads/${choice.image_url}`}
+                                alt={choice.word || 'Image'}
+                                className="max-h-20 max-w-full object-contain mr-3"
+                              />
+                            ) : null}
+                            <span className="text-gray-800 font-medium text-lg">
+                              {choice.word}
+                            </span>
+                          </div>
 
-                    return (
-                      <div
-                        key={choice.id}
-                        data-target-id={choice.id}
-                        className={`relative bg-white p-5 rounded-xl shadow-md border ${
-                          matched
-                            ? 'border-green-300 bg-green-50'
-                            : 'border-gray-200'
-                        } flex items-center transition-all duration-300 hover:shadow-lg`}
-                      >
-                        <DroppableTarget
-                          id={`target-${choice.id}`}
-                          isOver={isCurrentOver}
-                          disabled={matched}
-                          matched={matched}
-                        />
-
-                        <div className="flex-1 flex items-center justify-end">
-                          {choice.image_url ? (
-                            <img
-                              src={`/uploads/${choice.image_url}`}
-                              alt={choice.word || 'Image'}
-                              className="max-h-20 max-w-full object-contain ml-3"
-                            />
-                          ) : null}
-                          <span className="text-gray-800 font-medium text-lg">
-                            {choice.word}
-                          </span>
+                          <DraggableConnector
+                            id={`connector-${choice.id}`}
+                            disabled={matched}
+                            matched={matched}
+                          />
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Center space - increased width */}
+                <div
+                  className="h-full flex items-center justify-center"
+                  style={{ width: '20%' }}
+                >
+                  <div className="h-[80%] w-0.5 bg-gray-200 rounded-full"></div>
+                </div>
+
+                {/* Right Column - Second Choices (Drop Targets) */}
+                <div className="w-[40%] flex flex-col">
+                  <h3 className="text-xl font-semibold text-center text-indigo-700 mb-6">
+                    Matches
+                  </h3>
+                  <div className="flex-1 flex flex-col justify-around py-4">
+                    {round.second_choices.map((choice) => {
+                      const matched = isMatched(choice.id, 'second');
+                      const isCurrentOver =
+                        isOver && activeId && activeId.startsWith('connector-');
+
+                      return (
+                        <div
+                          key={choice.id}
+                          data-target-id={choice.id}
+                          className={`relative bg-white p-5 rounded-xl shadow-md border ${
+                            matched
+                              ? 'border-green-300 bg-green-50'
+                              : 'border-gray-200'
+                          } flex items-center transition-all duration-300 hover:shadow-lg`}
+                        >
+                          <DroppableTarget
+                            id={`target-${choice.id}`}
+                            isOver={isCurrentOver}
+                            disabled={matched}
+                            matched={matched}
+                          />
+
+                          <div className="flex-1 flex items-center justify-end">
+                            {choice.image_url ? (
+                              <img
+                                src={`/uploads/${choice.image_url}`}
+                                alt={choice.word || 'Image'}
+                                className="max-h-20 max-w-full object-contain ml-3"
+                              />
+                            ) : null}
+                            <span className="text-gray-800 font-medium text-lg">
+                              {choice.word}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
-          </DndContext>
+            </DndContext>
 
-          {/* Game Complete Screen */}
-          {gameComplete && (
-            <div className="text-center space-y-6 bg-gradient-to-br from-indigo-50 to-blue-50 p-10 rounded-xl shadow-lg">
-              <h3 className="text-3xl font-bold text-indigo-600">
-                Congratulations! 🎉
-              </h3>
-              <p className="text-xl text-gray-700">
-                You've completed all rounds!
-              </p>
-              <Button
-                onClick={() =>
-                  navigate(`/quarter/${quarterId}/lesson/${lessonId}`)
-                }
-                className="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-lg text-lg shadow-lg shadow-indigo-200 transition-all duration-300 hover:scale-105"
-              >
-                Back to Lesson
-              </Button>
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
+            {/* Game Complete Screen */}
+            {gameComplete && (
+              <div className="text-center space-y-6 bg-gradient-to-br from-indigo-50 to-blue-50 p-10 rounded-xl shadow-lg">
+                <h3 className="text-3xl font-bold text-indigo-600">
+                  Congratulations! 🎉
+                </h3>
+                <p className="text-xl text-gray-700">
+                  You've completed all rounds!
+                </p>
+                <Button
+                  onClick={() =>
+                    navigate(`/quarter/${quarterId}/lesson/${lessonId}`)
+                  }
+                  className="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-lg text-lg shadow-lg shadow-indigo-200 transition-all duration-300 hover:scale-105"
+                >
+                  Back to Lesson
+                </Button>
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+    </GameBackground>
   );
 };
 

@@ -6,6 +6,7 @@ import confetti from 'canvas-confetti';
 import axios from 'axios';
 import { toast } from 'sonner';
 import Header from '../header';
+import GameBackground from '../GameBackground';
 
 const ProgressBar = ({ current, total }) => {
   const progress = (current / total) * 100;
@@ -166,70 +167,71 @@ const MultipleChoiceGamePlay = () => {
   const round = game.rounds[currentRound];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header />
+    <GameBackground>
+      <div className="min-h-screen flex flex-col">
+        <Header />
 
-      <div className="container mx-auto px-4 py-8 flex-1 flex flex-col">
-        <div className="mb-6">
-          <Button
-            variant="ghost"
-            className="flex items-center text-gray-600"
-            onClick={handleBackToLesson}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Lesson
-          </Button>
-        </div>
+        <main className="container mx-auto px-4 py-8 flex-1 flex flex-col">
+          <div className="mb-6">
+            <Button
+              variant="ghost"
+              className="bg-white text-red-700 hover:text-red-700 hover:bg-gray-50 transition-colors"
+              onClick={handleBackToLesson}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Lesson
+            </Button>
+          </div>
 
-        {/* Game Container */}
-        <div className="bg-white rounded-2xl shadow-xl p-6 md:p-10 space-y-6 border border-gray-100 max-w-4xl mx-auto w-full">
-          {/* Game Header */}
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
-                Multiple Choice Quiz
-              </h1>
-              <p className="text-gray-600">
-                Select the correct answer for each question
-              </p>
-            </div>
-            <div className="flex items-center gap-4 w-full">
-              <div className="bg-indigo-50 px-4 py-2 rounded-full">
-                <p className="text-sm font-medium text-indigo-700">
-                  Question {currentRound + 1} of {game.total_rounds}
+          {/* Game Container */}
+          <div className="bg-white rounded-2xl shadow-xl p-6 md:p-10 space-y-6 border border-gray-100 max-w-4xl mx-auto w-full">
+            {/* Game Header */}
+            <div className="space-y-6">
+              <div className="text-center space-y-2">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
+                  Multiple Choice Quiz
+                </h1>
+                <p className="text-gray-600">
+                  Select the correct answer for each question
                 </p>
               </div>
-              <div className="flex-grow">
-                <ProgressBar
-                  current={currentRound + 1}
-                  total={game.total_rounds}
-                />
+              <div className="flex items-center gap-4 w-full">
+                <div className="bg-indigo-50 px-4 py-2 rounded-full">
+                  <p className="text-sm font-medium text-indigo-700">
+                    Question {currentRound + 1} of {game.total_rounds}
+                  </p>
+                </div>
+                <div className="flex-grow">
+                  <ProgressBar
+                    current={currentRound + 1}
+                    total={game.total_rounds}
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Question */}
-          <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-8 mb-8">
-            <div className="text-2xl md:text-3xl font-medium text-gray-800 text-center leading-relaxed">
-              {round.question}
+            {/* Question */}
+            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-8 mb-8">
+              <div className="text-2xl md:text-3xl font-medium text-gray-800 text-center leading-relaxed">
+                {round.question}
+              </div>
             </div>
-          </div>
 
-          {/* Answer Choices */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {round.choices.map((choice) => {
-              const isSelected =
-                selectedChoice && selectedChoice.id === choice.id;
-              // Only show correct answers when the user got it right
-              const showCorrect =
-                isCorrect === true && (choice.is_correct || choice.isCorrect);
-              const showIncorrect = isSelected && isCorrect === false;
+            {/* Answer Choices */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {round.choices.map((choice) => {
+                const isSelected =
+                  selectedChoice && selectedChoice.id === choice.id;
+                // Only show correct answers when the user got it right
+                const showCorrect =
+                  isCorrect === true && (choice.is_correct || choice.isCorrect);
+                const showIncorrect = isSelected && isCorrect === false;
 
-              return (
-                <div
-                  key={choice.id}
-                  onClick={() => handleChoiceSelect(choice)}
-                  className={`
+                return (
+                  <div
+                    key={choice.id}
+                    onClick={() => handleChoiceSelect(choice)}
+                    className={`
                     p-6 rounded-xl border-2 cursor-pointer transition-all duration-200
                     ${
                       isSelected
@@ -239,10 +241,10 @@ const MultipleChoiceGamePlay = () => {
                     ${showCorrect ? 'border-green-500 bg-green-50' : ''}
                     ${showIncorrect ? 'border-red-500 bg-red-50' : ''}
                   `}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`
                       w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0
                       ${
                         isSelected
@@ -252,28 +254,29 @@ const MultipleChoiceGamePlay = () => {
                       ${showCorrect ? 'bg-green-500 text-white' : ''}
                       ${showIncorrect ? 'bg-red-500 text-white' : ''}
                     `}
-                    >
-                      {showCorrect && <Check className="h-5 w-5" />}
-                      {showIncorrect && <X className="h-5 w-5" />}
-                      {!showCorrect && !showIncorrect && (
-                        <span className="text-sm font-medium">
-                          {String.fromCharCode(
-                            65 + round.choices.indexOf(choice)
-                          )}
-                        </span>
-                      )}
+                      >
+                        {showCorrect && <Check className="h-5 w-5" />}
+                        {showIncorrect && <X className="h-5 w-5" />}
+                        {!showCorrect && !showIncorrect && (
+                          <span className="text-sm font-medium">
+                            {String.fromCharCode(
+                              65 + round.choices.indexOf(choice)
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-lg font-medium">
+                        {choice.choice_text || choice.text}
+                      </span>
                     </div>
-                    <span className="text-lg font-medium">
-                      {choice.choice_text || choice.text}
-                    </span>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        </main>
       </div>
-    </div>
+    </GameBackground>
   );
 };
 

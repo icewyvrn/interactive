@@ -150,12 +150,15 @@ lessonRouter.post(
   async (req, res) => {
     const { lessonId } = req.params;
     const files = req.files;
+    const { titles, descriptions } = req.body; // Parse metadata as JSON from request body
     const userId = 1; // Hardcoded for now, should come from auth token
 
     try {
       const presentations = [];
 
-      for (const file of files) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
         // Get the next display order
         const orderResult = await pool.query(
           'SELECT COALESCE(MAX(display_order), 0) + 1 as next_order FROM presentations WHERE lesson_id = $1',
@@ -163,13 +166,33 @@ lessonRouter.post(
         );
         const displayOrder = orderResult.rows[0].next_order;
 
-        // Insert the presentation
+        // Get title and description if available
+        let title = null;
+        let description = null;
+
+        if (titles && Array.isArray(titles) && titles[i]) {
+          title = titles[i];
+        }
+
+        if (descriptions && Array.isArray(descriptions) && descriptions[i]) {
+          description = descriptions[i];
+        }
+
+        // Insert the presentation with title and description
         const result = await pool.query(
           `INSERT INTO presentations 
-                 (lesson_id, content_type, file_url, display_order, created_by) 
-                 VALUES ($1, $2, $3, $4, $5) 
-                 RETURNING *`,
-          [lessonId, file.contentType, file.filename, displayOrder, userId]
+           (lesson_id, content_type, file_url, title, description, display_order, created_by) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7) 
+           RETURNING *`,
+          [
+            lessonId,
+            file.contentType,
+            file.filename,
+            title,
+            description,
+            displayOrder,
+            userId,
+          ]
         );
 
         presentations.push(result.rows[0]);

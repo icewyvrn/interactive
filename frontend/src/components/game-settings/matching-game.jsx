@@ -17,15 +17,151 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const MatchingGameSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
+const MatchingGameSettings = ({
+  isOpen,
+  onClose,
+  onBack,
+  onSubmit,
+  gameToEdit = null,
+}) => {
   const { lessonId } = useParams();
-  const [totalRounds, setTotalRounds] = useState(3);
+  const [totalRounds, setTotalRounds] = useState(
+    gameToEdit ? gameToEdit.total_rounds : 3
+  );
   const [rounds, setRounds] = useState([]);
   // State to track if we're currently processing a match toggle
   const [isProcessingMatch, setIsProcessingMatch] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(!!gameToEdit);
+  const [gameId, setGameId] = useState(gameToEdit?.id || null);
+
+  // Load game data if in edit mode
+  useEffect(() => {
+    if (gameToEdit && gameToEdit.game_type === 'matching') {
+      setIsEditMode(true);
+      setGameId(gameToEdit.id);
+      setTotalRounds(gameToEdit.total_rounds);
+
+      // If we have the full game data with rounds
+      if (gameToEdit.rounds) {
+        const formattedRounds = gameToEdit.rounds.map((round) => {
+          // Create a mapping of first choice IDs to their indices
+          const firstChoiceIdToIndex = {};
+          const firstChoices = round.first_choices.map((choice, index) => {
+            firstChoiceIdToIndex[choice.id] = index;
+            return {
+              id: `first-${round.round_number}-${index}`,
+              word: choice.word || '',
+              image: choice.image_url || null,
+              originalId: choice.id,
+            };
+          });
+
+          // Create a mapping of second choice IDs to their indices
+          const secondChoiceIdToIndex = {};
+          const secondChoices = round.second_choices.map((choice, index) => {
+            secondChoiceIdToIndex[choice.id] = index;
+            return {
+              id: `second-${round.round_number}-${index}`,
+              word: choice.word || '',
+              image: choice.image_url || null,
+              originalId: choice.id,
+            };
+          });
+
+          // Map correct matches using the index mappings
+          const matches = [];
+          if (round.correct_matches) {
+            round.correct_matches.forEach((match) => {
+              const firstIndex = firstChoiceIdToIndex[match.first_choice_id];
+              const secondIndex = secondChoiceIdToIndex[match.second_choice_id];
+              if (firstIndex !== undefined && secondIndex !== undefined) {
+                matches.push({ firstIndex, secondIndex });
+              }
+            });
+          }
+
+          return {
+            firstChoices,
+            secondChoices,
+            matches,
+          };
+        });
+        setRounds(formattedRounds);
+      } else {
+        // If we only have the game ID, fetch the full game data
+        fetchGameData(gameToEdit.id);
+      }
+    }
+  }, [gameToEdit]);
+
+  // Fetch game data for editing
+  const fetchGameData = async (id) => {
+    try {
+      const response = await axios.get(`/api/game/games/matching/${id}`);
+      if (response.data.success) {
+        const game = response.data.game;
+        if (game.game_type !== 'matching') {
+          toast.error('Invalid game type');
+          return;
+        }
+        setTotalRounds(game.total_rounds);
+
+        const formattedRounds = game.rounds.map((round) => {
+          // Create a mapping of first choice IDs to their indices
+          const firstChoiceIdToIndex = {};
+          const firstChoices = round.first_choices.map((choice, index) => {
+            firstChoiceIdToIndex[choice.id] = index;
+            return {
+              id: `first-${round.round_number}-${index}`,
+              word: choice.word || '',
+              image: choice.image_url || null,
+              originalId: choice.id,
+            };
+          });
+
+          // Create a mapping of second choice IDs to their indices
+          const secondChoiceIdToIndex = {};
+          const secondChoices = round.second_choices.map((choice, index) => {
+            secondChoiceIdToIndex[choice.id] = index;
+            return {
+              id: `second-${round.round_number}-${index}`,
+              word: choice.word || '',
+              image: choice.image_url || null,
+              originalId: choice.id,
+            };
+          });
+
+          // Map correct matches using the index mappings
+          const matches = [];
+          if (round.correct_matches) {
+            round.correct_matches.forEach((match) => {
+              const firstIndex = firstChoiceIdToIndex[match.first_choice_id];
+              const secondIndex = secondChoiceIdToIndex[match.second_choice_id];
+              if (firstIndex !== undefined && secondIndex !== undefined) {
+                matches.push({ firstIndex, secondIndex });
+              }
+            });
+          }
+
+          return {
+            firstChoices,
+            secondChoices,
+            matches,
+          };
+        });
+        setRounds(formattedRounds);
+      }
+    } catch (error) {
+      console.error('Error fetching game data:', error);
+      toast.error('Failed to load game data for editing');
+    }
+  };
 
   // Initialize or update rounds when totalRounds changes
   useEffect(() => {
+    // Skip this effect if we're in edit mode and already have rounds data
+    if (isEditMode && rounds.length > 0) return;
+
     setRounds((prevRounds) => {
       const newRounds = [...prevRounds];
       // Add new rounds if needed
@@ -50,7 +186,7 @@ const MatchingGameSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
       }
       return newRounds;
     });
-  }, [totalRounds]);
+  }, [totalRounds, isEditMode, rounds.length]);
 
   const handleFirstChoiceChange = (roundIndex, choiceIndex, field, value) => {
     setRounds((prevRounds) => {
@@ -447,22 +583,44 @@ const MatchingGameSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
         rounds: processedRounds,
       };
 
-      // Send to API
-      const response = await axios.post(
-        `/api/game/lessons/${lessonId}/games/matching`,
-        gameData
-      );
+      let response;
 
-      if (response.data.success) {
-        toast.success('Matching game created successfully!');
-        onSubmit(response.data.game);
-        onClose();
+      if (isEditMode) {
+        // Update existing game
+        response = await axios.put(
+          `/api/game/games/matching/${gameId}`,
+          gameData
+        );
+        if (response.data.success) {
+          toast.success('Game updated successfully!');
+          onSubmit(response.data.game);
+          onClose();
+        } else {
+          toast.error('Failed to update game');
+        }
       } else {
-        toast.error('Failed to create game');
+        // Create new game
+        response = await axios.post(
+          `/api/game/lessons/${lessonId}/games/matching`,
+          gameData
+        );
+        if (response.data.success) {
+          toast.success('Matching game created successfully!');
+          onSubmit(response.data.game);
+          onClose();
+        } else {
+          toast.error('Failed to create game');
+        }
       }
     } catch (error) {
-      console.error('Error creating game:', error);
-      toast.error(error.response?.data?.message || 'Failed to create game');
+      console.error(
+        `Error ${isEditMode ? 'updating' : 'creating'} game:`,
+        error
+      );
+      toast.error(
+        error.response?.data?.message ||
+          `Failed to ${isEditMode ? 'update' : 'create'} game`
+      );
     }
   };
 
@@ -481,10 +639,12 @@ const MatchingGameSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
             </Button>
             <div>
               <DialogTitle className="text-2xl font-bold">
-                Matching Game Settings
+                {isEditMode ? 'Edit' : 'Create'} Matching Game
               </DialogTitle>
               <DialogDescription className="text-gray-500">
-                Create a matching game where students connect related items.
+                {isEditMode
+                  ? 'Edit your matching game where students connect related items.'
+                  : 'Create a matching game where students connect related items.'}
               </DialogDescription>
             </div>
           </div>
@@ -880,7 +1040,7 @@ const MatchingGameSettings = ({ isOpen, onClose, onBack, onSubmit }) => {
             onClick={handleSubmit}
             className="bg-indigo-700 text-white hover:bg-indigo-800"
           >
-            Create Game
+            {isEditMode ? 'Update Game' : 'Create Game'}
           </Button>
         </DialogFooter>
       </DialogContent>

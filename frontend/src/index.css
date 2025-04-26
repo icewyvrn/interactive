@@ -177,3 +177,49 @@
 .sonner-close-button {
   @apply text-white/80 hover:text-white;
 }
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.playful-background .float-animation {
+  animation: float 6s ease-in-out infinite;
+}
+
+.playful-background .bounce-animation {
+  animation: bounce 4s ease-in-out infinite;
+}
+
+.playful-background .pulse-animation {
+  animation: pulse 5s ease-in-out infinite;
+}

@@ -7,6 +7,8 @@ import { Toaster } from 'sonner';
 import DragDropGamePlay from './components/screen-play/drag-drop';
 import MatchingGamePlay from './components/screen-play/matching-game';
 import MultipleChoiceGamePlay from './components/screen-play/multiple-choice';
+import About from './pages/About';
+import Instructions from './pages/Instructions';
 
 function App() {
   return (
@@ -32,6 +34,8 @@ function App() {
           path="/quarter/:quarterId/lesson/:lessonId/game/multiple-choice/:gameId"
           element={<MultipleChoiceGamePlay />}
         />
+        <Route path="/about" element={<About />} />
+        <Route path="/instructions" element={<Instructions />} />
       </Routes>
     </>
   );

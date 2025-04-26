@@ -1,10 +1,15 @@
 import { pool } from './db.js';
+import bcrypt from 'bcrypt';
 
 export const createTables = async () => {
   try {
+    // Hash the password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash('teacher123', saltRounds);
+
     const queries = `
       -- Enum for content types
-      DO $$ 
+      DO $$
       BEGIN
         IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'content_type') THEN
           CREATE TYPE content_type AS ENUM ('powerpoint', 'image', 'video');
@@ -41,6 +46,8 @@ export const createTables = async () => {
         lesson_id INTEGER REFERENCES lessons(id) ON DELETE CASCADE,
         content_type content_type NOT NULL,
         file_url TEXT NOT NULL,
+        title VARCHAR(255),
+        description TEXT,
         display_order INTEGER NOT NULL,
         created_by INTEGER REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -71,9 +78,11 @@ export const createTables = async () => {
       CREATE TABLE IF NOT EXISTS dd_round_choices (
         id SERIAL PRIMARY KEY,
         round_id INTEGER REFERENCES dd_game_rounds(id) ON DELETE CASCADE,
-        word TEXT NOT NULL,
+        word TEXT,
+        image_url TEXT,
         is_correct BOOLEAN NOT NULL DEFAULT false,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT word_or_image CHECK (word IS NOT NULL OR image_url IS NOT NULL)
       );
 
       -- Create matching games table
@@ -179,21 +188,31 @@ export const createTables = async () => {
         BEFORE INSERT ON lessons
         FOR EACH ROW
         EXECUTE FUNCTION generate_lesson_number();
-
-      -- Insert teacher credentials
-      INSERT INTO users (username, password)
-      VALUES ('teacher@dev.com', '2579')
-      ON CONFLICT (username) DO NOTHING;
-
-      -- Insert the four static quarters
-      INSERT INTO quarters (name, description)
-      VALUES 
-        ('Quarter 1', 'First quarter of the academic year'),
-        ('Quarter 2', 'Second quarter of the academic year'),
-        ('Quarter 3', 'Third quarter of the academic year'),
-        ('Quarter 4', 'Fourth quarter of the academic year')
-      ON CONFLICT (name) DO NOTHING;
       `;
+
+    // Execute the table creation
+    await pool.query(queries);
+
+    // Insert the hashed password separately - this is safer than including the hash in the SQL string
+    await pool.query(
+      `
+      INSERT INTO users (username, password)
+      VALUES ($1, $2)
+      ON CONFLICT (username) DO NOTHING;
+    `,
+      ['teacher@dev.com', hashedPassword]
+    );
+
+    // Insert quarters
+    await pool.query(`
+      INSERT INTO quarters (name, description)
+      VALUES
+        ('1st Grading', 'First grading of the academic year'),
+        ('2nd Grading', 'Second grading of the academic year'),
+        ('3rd Grading', 'Third grading of the academic year'),
+        ('4th Grading', 'Fourth grading of the academic year')
+      ON CONFLICT (name) DO NOTHING;
+    `);
 
     await pool.query(queries);
     console.log('All tables created successfully in development database');
