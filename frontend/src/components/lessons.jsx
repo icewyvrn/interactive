@@ -32,7 +32,10 @@ const Lessons = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newLessonTitle, setNewLessonTitle] = useState('');
-  const nextLessonNumber = lessons.length + 1;
+  const nextLessonNumber =
+    lessons.length > 0
+      ? Math.max(...lessons.map((lesson) => lesson.lesson_number)) + 1
+      : 1;
 
   // Array of vibrant card accent colors
   const cardColors = [
@@ -65,6 +68,7 @@ const Lessons = () => {
   const handleAddLesson = async () => {
     try {
       const response = await axios.post(`/api/lessons/${quarterId}/lessons`, {
+        lessonId: nextLessonNumber,
         title: newLessonTitle,
       });
 

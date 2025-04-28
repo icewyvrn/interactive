@@ -121,13 +121,13 @@ lessonRouter.get('/:lessonId/presentations', async (req, res) => {
 // POST create a new lesson for a specific quarter
 lessonRouter.post('/:quarterId/lessons', async (req, res) => {
   const { quarterId } = req.params;
-  const { title } = req.body;
+  const { lessonId, title } = req.body;
   const userId = 1; // Hardcoded for now, should come from auth token
 
   try {
     const result = await pool.query(
-      'INSERT INTO lessons (quarter_id, title, created_by) VALUES ($1, $2, $3) RETURNING *',
-      [quarterId, title, userId]
+      'INSERT INTO lessons (id, quarter_id, title, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
+      [lessonId, quarterId, title, userId]
     );
 
     res.json({
@@ -217,5 +217,86 @@ lessonRouter.post(
     }
   }
 );
+
+// DELETE a specific presentation
+lessonRouter.delete('/:lessonId/presentations/:presentationId', async (req, res) => {
+  const { presentationId } = req.params;
+
+  try {
+    // Fetch the presentation to get the file path
+    const presentationResult = await pool.query(
+      'SELECT file_url FROM presentations WHERE id = $1',
+      [presentationId]
+    );
+
+    if (presentationResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Presentation not found',
+      });
+    }
+
+    const filePath = path.join(__dirname, '../uploads', presentationResult.rows[0].file_url);
+
+    // Delete the presentation record from the database
+    await pool.query('DELETE FROM presentations WHERE id = $1', [presentationId]);
+
+    // Remove the file from the filesystem
+    await fs.remove(filePath);
+
+    res.json({
+      success: true,
+      message: 'Presentation deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting presentation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete presentation',
+    });
+  }
+});
+
+// DELETE a specific lesson and its associated presentations
+lessonRouter.delete('/:lessonId', async (req, res) => {
+  const { lessonId } = req.params;
+
+  try {
+    const presentationsResult = await pool.query(
+      'SELECT file_url FROM presentations WHERE lesson_id = $1',
+      [lessonId]
+    );
+
+    // Delete all associated presentation files from the filesystem
+    for (const presentation of presentationsResult.rows) {
+      const filePath = path.join(__dirname, '../uploads', presentation.file_url);
+      await fs.remove(filePath).catch(console.error);
+    }
+
+    // Delete all presentations associated with the lesson
+    await pool.query('DELETE FROM presentations WHERE lesson_id = $1', [lessonId]);
+
+    // Delete the lesson itself
+    const lessonResult = await pool.query('DELETE FROM lessons WHERE id = $1 RETURNING *', [lessonId]);
+
+    if (lessonResult.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Lesson not found',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Lesson and associated presentations deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting lesson:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete lesson',
+    });
+  }
+});
 
 export default lessonRouter;

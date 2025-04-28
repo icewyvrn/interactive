@@ -6,6 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Upload,
   Gamepad2,
   Image,
@@ -19,6 +27,8 @@ import {
   CalendarDays,
   Plus,
   ArrowLeft,
+  AlertTriangle,
+  Trash2,
 } from 'lucide-react';
 import PresentationUpload from '../components/presentation-upload';
 import axios from 'axios';
@@ -51,6 +61,8 @@ const LessonDetails = () => {
   const [showMultipleChoiceEditDialog, setShowMultipleChoiceEditDialog] =
     useState(false);
   const [gameToEdit, setGameToEdit] = useState(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
 
   // Fetch lesson details
   useEffect(() => {
@@ -272,6 +284,60 @@ const LessonDetails = () => {
     }
   };
 
+  const confirmDeletePresentation = (presentationId) => {
+    setItemToDelete({ type: 'presentation', id: presentationId });
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeletePresentation = async () => {
+    if (itemToDelete?.type === 'presentation') {
+      try {
+        const response = await axios.delete(
+          `/api/lessons/${lessonId}/presentations/${itemToDelete.id}`
+        );
+        if (response.data.success) {
+          setPresentations((prev) =>
+            prev.filter((presentation) => presentation.id !== itemToDelete.id)
+          );
+          toast.success('Presentation deleted successfully');
+        } else {
+          toast.error('Failed to delete presentation');
+        }
+      } catch (error) {
+        console.error('Error deleting presentation:', error);
+        toast.error('Failed to delete presentation');
+      } finally {
+        setShowDeleteDialog(false);
+        setItemToDelete(null);
+      }
+    }
+  };
+
+  const confirmDeleteLesson = () => {
+    setItemToDelete({ type: 'lesson' });
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteLesson = async () => {
+    if (itemToDelete?.type === 'lesson') {
+      try {
+        const response = await axios.delete(`/api/lessons/${lessonId}`);
+        if (response.data.success) {
+          toast.success('Lesson deleted successfully');
+          navigate(`/quarter/${quarterId}`);
+        } else {
+          toast.error('Failed to delete lesson');
+        }
+      } catch (error) {
+        console.error('Error deleting lesson:', error);
+        toast.error('Failed to delete lesson');
+      } finally {
+        setShowDeleteDialog(false);
+        setItemToDelete(null);
+      }
+    }
+  };
+
   const renderPresentationsGrid = () => {
     const videoItems = presentations.filter((p) => p.content_type === 'video');
     const otherItems = presentations.filter((p) => p.content_type !== 'video');
@@ -343,7 +409,7 @@ const LessonDetails = () => {
 
                   {/* Play button overlay */}
                   <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all group-hover:bg-black/20 group-hover:opacity-100">
-                    <div className="transform translate-y-4 transition-transform group-hover:translate-y-0">
+                    <div className="transform translate-y-4 transition-transform group-hover:translate-y-0 gap-2 flex">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -351,6 +417,16 @@ const LessonDetails = () => {
                         onClick={() => handlePresentationClick(presentation)}
                       >
                         Play Video
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          confirmDeletePresentation(presentation.id);
+                        }}
+                      >
+                        Delete
                       </Button>
                     </div>
                   </div>
@@ -427,18 +503,32 @@ const LessonDetails = () => {
 
                         {/* Download button for PowerPoint */}
                         {presentation.content_type === 'powerpoint' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-3 text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDownload(presentation);
-                            }}
-                          >
-                            <Download className="w-4 h-4 mr-1.5" />
-                            Download
-                          </Button>
+                          <div class="flex flex-col gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-3 text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDownload(presentation);
+                              }}
+                            >
+                              <Download className="w-4 h-4 mr-1.5" />
+                              Download
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-3 text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                confirmDeletePresentation(presentation.id);
+                              }}
+                            >
+                              <Download className="w-4 h-4 mr-1.5" />
+                              Delete
+                            </Button>
+                          </div>
                         )}
                       </div>
 
@@ -465,7 +555,7 @@ const LessonDetails = () => {
                   {/* Hover Overlay for Images */}
                   {presentation.content_type === 'image' && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all group-hover:bg-black/20 group-hover:opacity-100">
-                      <div className="transform translate-y-4 transition-transform group-hover:translate-y-0">
+                      <div className="transform translate-y-4 transition-transform group-hover:translate-y-0 gap-2 flex">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -473,6 +563,17 @@ const LessonDetails = () => {
                           onClick={() => handlePresentationClick(presentation)}
                         >
                           View Image
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="bg-red-500 text-white hover:bg-red-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            confirmDeletePresentation(presentation.id);
+                          }}
+                        >
+                          Delete
                         </Button>
                       </div>
                     </div>
@@ -490,6 +591,42 @@ const LessonDetails = () => {
     <LessonBackground>
       <div className="min-h-screen">
         <Header />
+
+        {/* Delete Dialog - moved outside renderPresentationsGrid so it's always accessible */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600">
+                <AlertTriangle className="h-5 w-5" />
+                Confirm Delete
+              </DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this{' '}
+                {itemToDelete?.type === 'lesson' ? 'lesson' : 'file'}? This
+                action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={
+                  itemToDelete?.type === 'lesson'
+                    ? handleDeleteLesson
+                    : handleDeletePresentation
+                }
+              >
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <main className="container mx-auto px-4 py-8">
           <div className="mb-8">
             <div className="bg-white/90 backdrop-blur-sm shadow-md rounded-xl p-4 flex justify-between items-center mb-8">
@@ -525,16 +662,26 @@ const LessonDetails = () => {
                   </span>
                 )}
               </nav>
-
-              {/* Right Side: Back Button */}
-              <Button
-                onClick={() => navigate(`/quarter/${quarterId}`)}
-                variant="outline"
-                className="flex items-center bg-white border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800 shadow-sm"
-              >
-                <ArrowLeft className="w-4 h-4 mr-1" />
-                Back
-              </Button>
+              <div class="flex gap-4">
+                <Button
+                  onClick={() => {
+                    confirmDeleteLesson();
+                  }}
+                  variant="destructive"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Delete
+                </Button>
+                {/* Right Side: Back Button */}
+                <Button
+                  onClick={() => navigate(`/quarter/${quarterId}`)}
+                  variant="outline"
+                  className="flex items-center bg-white border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800 shadow-sm"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-1" />
+                  Back
+                </Button>
+              </div>
             </div>
             <Separator className="my-4" />
           </div>
